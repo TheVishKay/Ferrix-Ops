@@ -310,7 +310,7 @@ Add a small "Quick Actions" area.
 
 Actions:
 
-+ Add Employee
+- Add Employee
 
 Mark Attendance
 
