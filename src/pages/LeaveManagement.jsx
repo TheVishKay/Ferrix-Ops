@@ -42,9 +42,15 @@ export default function LeaveManagement() {
   const approve = (id) => setLocalStatuses((prev) => ({ ...prev, [id]: "Approved" }));
   const reject = (id) => setLocalStatuses((prev) => ({ ...prev, [id]: "Rejected" }));
 
-  const pending = leaveRequests.filter((r) => (localStatuses[r.id] ?? r.status) === "Pending").length;
-  const approved = leaveRequests.filter((r) => (localStatuses[r.id] ?? r.status) === "Approved").length;
-  const rejected = leaveRequests.filter((r) => (localStatuses[r.id] ?? r.status) === "Rejected").length;
+  const pending = leaveRequests.filter(
+    (r) => (localStatuses[r.id] ?? r.status) === "Pending",
+  ).length;
+  const approved = leaveRequests.filter(
+    (r) => (localStatuses[r.id] ?? r.status) === "Approved",
+  ).length;
+  const rejected = leaveRequests.filter(
+    (r) => (localStatuses[r.id] ?? r.status) === "Rejected",
+  ).length;
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -57,7 +63,9 @@ export default function LeaveManagement() {
           { label: "Rejected", value: rejected, tone: "coral" },
         ].map((s) => (
           <div key={s.label} className="hr-card hr-metric-card">
-            <p className={`font-display text-[32px] font-black leading-none tracking-tight hr-tone-${s.tone}`}>
+            <p
+              className={`font-display text-[32px] font-black leading-none tracking-tight hr-tone-${s.tone}`}
+            >
               {s.value}
             </p>
             <p className="mt-2 text-sm font-medium text-foreground">{s.label}</p>
@@ -155,7 +163,9 @@ export default function LeaveManagement() {
                     </td>
                     <td className="text-xs">{req.appliedOn}</td>
                     <td>
-                      <Badge className={`hr-status-badge hr-tone-${statusToneMap[currentStatus] ?? "cyan"}`}>
+                      <Badge
+                        className={`hr-status-badge hr-tone-${statusToneMap[currentStatus] ?? "cyan"}`}
+                      >
                         <span className="hr-mini-dot" /> {currentStatus}
                       </Badge>
                     </td>
@@ -191,7 +201,11 @@ export default function LeaveManagement() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <EmptyState icon={CalendarDays} title="No requests found" subtitle="Adjust your filters." />
+            <EmptyState
+              icon={CalendarDays}
+              title="No requests found"
+              subtitle="Adjust your filters."
+            />
           )}
         </div>
       </section>

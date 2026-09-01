@@ -81,9 +81,7 @@ export default function Notifications() {
             }`}
           >
             {/* Type emoji */}
-            <div
-              className={`hr-icon-box ${toneClass(notif.tone)} mt-0.5 shrink-0 size-10`}
-            >
+            <div className={`hr-icon-box ${toneClass(notif.tone)} mt-0.5 shrink-0 size-10`}>
               <span className="text-base" aria-hidden="true">
                 {typeIcons[notif.type] ?? "🔔"}
               </span>

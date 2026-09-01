@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { notifications } from "@/data/mockData";
+import { useAuth } from "../../contexts/AuthContext";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/" },
@@ -33,6 +34,21 @@ const navItems = [
 const unreadCount = notifications.filter((n) => !n.read).length;
 
 export default function Sidebar({ mobileOpen, onClose }) {
+  const { profile, signOut } = useAuth();
+
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
+    : "??";
+
+  const displayRole = profile?.role
+    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).toLowerCase()
+    : "No Role Assigned";
+
   return (
     <>
       {/* Mobile overlay */}
@@ -101,9 +117,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
                     {item.label === "Notifications" && unreadCount > 0 && (
                       <span className="ml-auto hr-nav-count">{unreadCount}</span>
                     )}
-                    {isActive && item.to !== "/" && (
-                      <span className="sr-only">(current page)</span>
-                    )}
+                    {isActive && item.to !== "/" && <span className="sr-only">(current page)</span>}
                   </>
                 )}
               </NavLink>
@@ -116,17 +130,20 @@ export default function Sidebar({ mobileOpen, onClose }) {
           <div className="hr-hairline mb-4" />
           <div className="flex items-center gap-3 p-2">
             <Avatar className="size-10 rounded-xl">
-              <AvatarFallback className="hr-avatar hr-tone-coral">AV</AvatarFallback>
+              <AvatarFallback className="hr-avatar hr-tone-coral">{initials}</AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">Admin</p>
-              <p className="truncate text-xs text-sidebar-foreground/60">HR Administrator</p>
+              <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                {profile?.full_name || "Unknown User"}
+              </p>
+              <p className="truncate text-xs text-sidebar-foreground/60">{displayRole}</p>
             </div>
           </div>
           <Button
             variant="ghost"
+            onClick={signOut}
             className="hr-nav-item mt-1 w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground"
-            aria-label="Log out placeholder"
+            aria-label="Log out"
           >
             <LogOut className="size-[17px]" />
             <span>Log out</span>

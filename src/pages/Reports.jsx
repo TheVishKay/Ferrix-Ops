@@ -1,12 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import {
-  Activity,
-  ArrowUpRight,
-  CalendarDays,
-  Clock3,
-  Users,
-  WalletCards,
-} from "lucide-react";
+import { Activity, ArrowUpRight, CalendarDays, Clock3, Users, WalletCards } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +39,8 @@ const reportCategories = [
   },
   {
     title: "Workforce Analytics",
-    description: "Cross-module insights: productivity index, cost-per-employee, and workforce health.",
+    description:
+      "Cross-module insights: productivity index, cost-per-employee, and workforce health.",
     icon: Activity,
     tone: "lime",
     count: 2,
@@ -69,7 +63,10 @@ export default function Reports() {
       </div>
 
       {/* Report category grid */}
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Report categories">
+      <section
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        aria-label="Report categories"
+      >
         {reportCategories.map((cat) => {
           const Icon = cat.icon;
           return (
@@ -97,7 +94,10 @@ export default function Reports() {
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                 {cat.description}
               </p>
-              <div className="mt-4 flex items-center gap-1 text-xs font-medium" style={{ color: `var(--hr-${cat.tone})` }}>
+              <div
+                className="mt-4 flex items-center gap-1 text-xs font-medium"
+                style={{ color: `var(--hr-${cat.tone})` }}
+              >
                 View data <ArrowUpRight className="size-3.5" />
               </div>
             </div>
@@ -112,7 +112,8 @@ export default function Reports() {
         </div>
         <p className="text-sm font-semibold text-foreground">Full Report Builder — Coming Soon</p>
         <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-          Schedule automatic reports, export to PDF/Excel, and set up email delivery in a future update.
+          Schedule automatic reports, export to PDF/Excel, and set up email delivery in a future
+          update.
         </p>
         <Button variant="outline" size="sm" className="mt-5 gap-1.5" disabled>
           Request Early Access

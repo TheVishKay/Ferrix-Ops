@@ -23,10 +23,7 @@ export default function AppLayout({ headerProps }) {
     <div className="hr-app min-h-screen bg-background text-foreground">
       <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <div className="lg:ml-64">
-        <Header
-          onMenuOpen={() => setMobileNavOpen(true)}
-          {...(headerProps ?? {})}
-        />
+        <Header onMenuOpen={() => setMobileNavOpen(true)} {...(headerProps ?? {})} />
         <Outlet />
       </div>
     </div>

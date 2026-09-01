@@ -402,7 +402,6 @@ Do not add payroll, recruitment, performance management, CRM, inventory, or unre
 
 Build the homepage as a polished foundation that we can extend with the Employees, Attendance, Leave, and Bills modules in later prompts.
 
-
 mpt.
 
 ## Development

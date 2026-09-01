@@ -5,11 +5,26 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { notifications } from "@/data/mockData";
+import { useAuth } from "../../contexts/AuthContext";
 
 const unreadCount = notifications.filter((n) => !n.read).length;
 
 export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone = "coral" }) {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
+    : "??";
+
+  const displayRole = profile?.role
+    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).toLowerCase()
+    : "No Role Assigned";
 
   return (
     <header className="hr-header sticky top-0 z-30 border-b border-border bg-background/90 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -76,11 +91,13 @@ export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone =
 
           <div className="flex items-center gap-2">
             <Avatar className="size-10 rounded-xl">
-              <AvatarFallback className="hr-avatar hr-tone-coral">AV</AvatarFallback>
+              <AvatarFallback className="hr-avatar hr-tone-coral">{initials}</AvatarFallback>
             </Avatar>
             <div className="hidden leading-tight sm:block">
-              <p className="text-sm font-semibold text-foreground">Admin</p>
-              <p className="text-xs text-muted-foreground">HR Administrator</p>
+              <p className="text-sm font-semibold text-foreground">
+                {profile?.full_name || "Unknown User"}
+              </p>
+              <p className="text-xs text-muted-foreground">{displayRole}</p>
             </div>
           </div>
         </div>

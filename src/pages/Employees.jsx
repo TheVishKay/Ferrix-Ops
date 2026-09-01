@@ -38,14 +38,19 @@ export default function Employees() {
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
       {/* Stats bar */}
-      <section
-        className="grid grid-cols-2 gap-4 md:grid-cols-4"
-        aria-label="Employee summary"
-      >
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Employee summary">
         {[
           { label: "Total Employees", value: employees.length, tone: "cyan" },
-          { label: "Active", value: employees.filter((e) => e.status === "Active").length, tone: "lime" },
-          { label: "On Leave", value: employees.filter((e) => e.status === "On Leave").length, tone: "amber" },
+          {
+            label: "Active",
+            value: employees.filter((e) => e.status === "Active").length,
+            tone: "lime",
+          },
+          {
+            label: "On Leave",
+            value: employees.filter((e) => e.status === "On Leave").length,
+            tone: "amber",
+          },
           { label: "Departments", value: departments.length, tone: "violet" },
         ].map((s) => (
           <div key={s.label} className="hr-card hr-metric-card">
@@ -84,7 +89,9 @@ export default function Employees() {
               <SelectContent>
                 <SelectItem value="all">Department: All</SelectItem>
                 {departments.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -116,7 +123,9 @@ export default function Employees() {
                 <th>Email</th>
                 <th>Joining Date</th>
                 <th>Status</th>
-                <th><span className="sr-only">Actions</span></th>
+                <th>
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -138,7 +147,9 @@ export default function Employees() {
                   <td className="text-xs">{emp.email}</td>
                   <td className="text-xs">{emp.joiningDate}</td>
                   <td>
-                    <Badge className={`hr-status-badge hr-tone-${statusTone[emp.status] ?? "cyan"}`}>
+                    <Badge
+                      className={`hr-status-badge hr-tone-${statusTone[emp.status] ?? "cyan"}`}
+                    >
                       <span className="hr-mini-dot" />
                       {emp.status}
                     </Badge>

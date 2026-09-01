@@ -81,15 +81,24 @@ export default function Settings() {
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
       {/* Profile */}
-      <SettingsSection title="Profile" subtitle="Update your personal and contact information." index="01" tone="cyan">
+      <SettingsSection
+        title="Profile"
+        subtitle="Update your personal and contact information."
+        index="01"
+        tone="cyan"
+      >
         <div className="flex items-center gap-4">
           <Avatar className="size-16 rounded-2xl">
             <AvatarFallback className="hr-avatar hr-tone-coral text-xl">AV</AvatarFallback>
           </Avatar>
           <div>
             <p className="text-sm font-semibold text-foreground">Admin</p>
-            <p className="text-xs text-muted-foreground">HR Administrator · Meridian Workforce Ltd.</p>
-            <Button variant="outline" size="sm" className="mt-2 text-xs">Change Photo</Button>
+            <p className="text-xs text-muted-foreground">
+              HR Administrator · Meridian Workforce Ltd.
+            </p>
+            <Button variant="outline" size="sm" className="mt-2 text-xs">
+              Change Photo
+            </Button>
           </div>
         </div>
         <Separator />
@@ -104,26 +113,65 @@ export default function Settings() {
             <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </FieldRow>
           <FieldRow label="Role">
-            <Input value={role} readOnly className="bg-muted text-muted-foreground cursor-not-allowed" />
+            <Input
+              value={role}
+              readOnly
+              className="bg-muted text-muted-foreground cursor-not-allowed"
+            />
           </FieldRow>
         </div>
       </SettingsSection>
 
       {/* Notifications */}
-      <SettingsSection title="Notifications" subtitle="Control which alerts reach you." index="02" tone="amber">
+      <SettingsSection
+        title="Notifications"
+        subtitle="Control which alerts reach you."
+        index="02"
+        tone="amber"
+      >
         <div className="space-y-3 divide-y divide-border">
-          <ToggleRow label="Email Notifications" subtitle="Receive a daily digest via email." checked={emailNotifs} onChange={setEmailNotifs} />
+          <ToggleRow
+            label="Email Notifications"
+            subtitle="Receive a daily digest via email."
+            checked={emailNotifs}
+            onChange={setEmailNotifs}
+          />
           <div className="pt-3 space-y-3">
-            <ToggleRow label="Leave Request Alerts" subtitle="Notify when an employee submits a leave request." checked={leaveAlerts} onChange={setLeaveAlerts} />
-            <ToggleRow label="Bill & Expense Alerts" subtitle="Notify when a bill is submitted for approval." checked={billAlerts} onChange={setBillAlerts} />
-            <ToggleRow label="Task Updates" subtitle="Notify on task status changes." checked={taskAlerts} onChange={setTaskAlerts} />
-            <ToggleRow label="Attendance Corrections" subtitle="Notify when an attendance correction is raised." checked={attendanceAlerts} onChange={setAttendanceAlerts} />
+            <ToggleRow
+              label="Leave Request Alerts"
+              subtitle="Notify when an employee submits a leave request."
+              checked={leaveAlerts}
+              onChange={setLeaveAlerts}
+            />
+            <ToggleRow
+              label="Bill & Expense Alerts"
+              subtitle="Notify when a bill is submitted for approval."
+              checked={billAlerts}
+              onChange={setBillAlerts}
+            />
+            <ToggleRow
+              label="Task Updates"
+              subtitle="Notify on task status changes."
+              checked={taskAlerts}
+              onChange={setTaskAlerts}
+            />
+            <ToggleRow
+              label="Attendance Corrections"
+              subtitle="Notify when an attendance correction is raised."
+              checked={attendanceAlerts}
+              onChange={setAttendanceAlerts}
+            />
           </div>
         </div>
       </SettingsSection>
 
       {/* Appearance */}
-      <SettingsSection title="Appearance" subtitle="Customise the look and regional formatting." index="03" tone="violet">
+      <SettingsSection
+        title="Appearance"
+        subtitle="Customise the look and regional formatting."
+        index="03"
+        tone="violet"
+      >
         <div className="space-y-4">
           <FieldRow label="Theme">
             <Select value={theme} onValueChange={setTheme}>
@@ -165,7 +213,12 @@ export default function Settings() {
       </SettingsSection>
 
       {/* Security */}
-      <SettingsSection title="Security" subtitle="Manage your password and session settings." index="04" tone="coral">
+      <SettingsSection
+        title="Security"
+        subtitle="Manage your password and session settings."
+        index="04"
+        tone="coral"
+      >
         <div className="space-y-4">
           <FieldRow label="Current Password">
             <Input type="password" placeholder="••••••••" />
@@ -187,11 +240,11 @@ export default function Settings() {
       {/* Save bar */}
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
         {saved && (
-          <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-            ✓ Settings saved
-          </p>
+          <p className="text-sm text-green-600 dark:text-green-400 font-medium">✓ Settings saved</p>
         )}
-        <Button variant="outline" size="sm">Discard Changes</Button>
+        <Button variant="outline" size="sm">
+          Discard Changes
+        </Button>
         <Button size="sm" className="gap-1.5" onClick={handleSave}>
           <Save className="size-3.5" /> Save Settings
         </Button>

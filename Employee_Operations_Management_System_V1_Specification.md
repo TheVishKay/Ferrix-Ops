@@ -1,4 +1,5 @@
 # Employee Operations Management System
+
 ## Detailed V1 Project Specification
 
 **Project Version:** V1 Prototype  
@@ -204,32 +205,32 @@ Employees cannot:
 
 # 7. Permission Matrix
 
-| Feature | Owner | Accounts | Employee |
-|---|---|---|---|
-| View all employees | Full | Limited | No |
-| View own profile | Yes | Yes | Yes |
-| Create employee | Yes | No | No |
-| Edit employee | Yes | No | Limited own profile |
-| Deactivate employee | Yes | No | No |
-| Manage departments | Yes | No | No |
-| Manage designations | Yes | No | No |
-| View all attendance | Yes | No | No |
-| View own attendance | Yes | Yes | Yes |
-| Check in | Optional | Yes | Yes |
-| Check out | Optional | Yes | Yes |
-| Request attendance correction | Yes | Yes | Yes |
-| Approve attendance correction | Yes | No | No |
-| Submit bill | Yes | Yes | Yes |
-| View all bills | Yes | Yes | No |
-| View own bills | Yes | Yes | Yes |
-| Review bills | Yes | Yes | No |
-| Verify bills | Yes | Yes | No |
-| Return bill for correction | Yes | Yes | No |
-| Reject bill | Yes | Yes | No |
-| Final approval | Yes | No | No |
-| Record payment | View | Yes | No |
-| View payment history | Yes | Yes | Own only |
-| View audit logs | Yes | Limited financial audit | No |
+| Feature                       | Owner    | Accounts                | Employee            |
+| ----------------------------- | -------- | ----------------------- | ------------------- |
+| View all employees            | Full     | Limited                 | No                  |
+| View own profile              | Yes      | Yes                     | Yes                 |
+| Create employee               | Yes      | No                      | No                  |
+| Edit employee                 | Yes      | No                      | Limited own profile |
+| Deactivate employee           | Yes      | No                      | No                  |
+| Manage departments            | Yes      | No                      | No                  |
+| Manage designations           | Yes      | No                      | No                  |
+| View all attendance           | Yes      | No                      | No                  |
+| View own attendance           | Yes      | Yes                     | Yes                 |
+| Check in                      | Optional | Yes                     | Yes                 |
+| Check out                     | Optional | Yes                     | Yes                 |
+| Request attendance correction | Yes      | Yes                     | Yes                 |
+| Approve attendance correction | Yes      | No                      | No                  |
+| Submit bill                   | Yes      | Yes                     | Yes                 |
+| View all bills                | Yes      | Yes                     | No                  |
+| View own bills                | Yes      | Yes                     | Yes                 |
+| Review bills                  | Yes      | Yes                     | No                  |
+| Verify bills                  | Yes      | Yes                     | No                  |
+| Return bill for correction    | Yes      | Yes                     | No                  |
+| Reject bill                   | Yes      | Yes                     | No                  |
+| Final approval                | Yes      | No                      | No                  |
+| Record payment                | View     | Yes                     | No                  |
+| View payment history          | Yes      | Yes                     | Own only            |
+| View audit logs               | Yes      | Limited financial audit | No                  |
 
 ---
 

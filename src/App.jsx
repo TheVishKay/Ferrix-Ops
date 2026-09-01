@@ -24,6 +24,8 @@ import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Each route entry maps a path to its page component and the header props
 // that <AppLayout> forwards to <Header>.
@@ -123,27 +125,27 @@ const routes = [
 export default function App() {
   return (
     <Routes>
-      {routes.map(({ path, element, header }) => (
+      <Route path="/login" element={<Login />} />
+      <Route element={<ProtectedRoute />}>
+        {routes.map(({ path, element, header }) => (
+          <Route key={path} element={<AppLayout headerProps={header} />}>
+            <Route path={path} element={element} />
+          </Route>
+        ))}
+        {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
         <Route
-          key={path}
-          element={<AppLayout headerProps={header} />}
+          element={
+            <AppLayout
+              headerProps={{
+                title: "Page Not Found",
+                subtitle: "This page does not exist",
+                tone: "coral",
+              }}
+            />
+          }
         >
-          <Route path={path} element={element} />
+          <Route path="*" element={<NotFound />} />
         </Route>
-      ))}
-      {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
-      <Route
-        element={
-          <AppLayout
-            headerProps={{
-              title: "Page Not Found",
-              subtitle: "This page does not exist",
-              tone: "coral",
-            }}
-          />
-        }
-      >
-        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

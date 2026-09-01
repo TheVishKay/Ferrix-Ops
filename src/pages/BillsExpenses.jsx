@@ -1,5 +1,14 @@
 import { useMemo, useState } from "react";
-import { Cell, BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Cell,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { MoreHorizontal, Search, WalletCards } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -77,7 +86,9 @@ export default function BillsExpenses() {
           { label: "Rejected", value: fmt(rejectedSum), tone: "coral" },
         ].map((s) => (
           <div key={s.label} className="hr-card hr-metric-card">
-            <p className={`font-display text-xl font-black leading-none tracking-tight text-foreground`}>
+            <p
+              className={`font-display text-xl font-black leading-none tracking-tight text-foreground`}
+            >
               {s.value}
             </p>
             <p className={`mt-2 text-sm font-medium hr-tone-${s.tone}`}>{s.label}</p>
@@ -100,7 +111,11 @@ export default function BillsExpenses() {
               layout="vertical"
               margin={{ top: 0, right: 12, left: 4, bottom: 0 }}
             >
-              <CartesianGrid horizontal={false} stroke="var(--hr-line-soft)" strokeDasharray="3 3" />
+              <CartesianGrid
+                horizontal={false}
+                stroke="var(--hr-line-soft)"
+                strokeDasharray="3 3"
+              />
               <XAxis type="number" hide />
               <YAxis
                 type="category"
@@ -110,10 +125,7 @@ export default function BillsExpenses() {
                 width={98}
                 tick={{ fill: "var(--hr-muted)", fontSize: 10 }}
               />
-              <Tooltip
-                cursor={{ fill: "var(--hr-surface-muted)" }}
-                formatter={(v) => fmt(v)}
-              />
+              <Tooltip cursor={{ fill: "var(--hr-surface-muted)" }} formatter={(v) => fmt(v)} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
                 {expenseChartData.map((item) => (
                   <Cell key={item.name} fill={`var(--hr-${item.tone})`} />
@@ -150,7 +162,11 @@ export default function BillsExpenses() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Category: All</SelectItem>
-                {expenseCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {expenseCategories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -160,7 +176,9 @@ export default function BillsExpenses() {
               <SelectContent>
                 <SelectItem value="all">Status: All</SelectItem>
                 {expenseStatuses.map((s) => (
-                  <SelectItem key={s} value={s}>{statusLabel[s]}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {statusLabel[s]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -177,7 +195,9 @@ export default function BillsExpenses() {
                 <th>Amount</th>
                 <th>Date</th>
                 <th>Status</th>
-                <th><span className="sr-only">Actions</span></th>
+                <th>
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -199,12 +219,19 @@ export default function BillsExpenses() {
                   <td className="font-display font-bold text-foreground">{fmt(exp.amount)}</td>
                   <td className="text-xs">{exp.date}</td>
                   <td>
-                    <Badge className={`hr-status-badge hr-tone-${statusToneMap[exp.status] ?? "cyan"}`}>
+                    <Badge
+                      className={`hr-status-badge hr-tone-${statusToneMap[exp.status] ?? "cyan"}`}
+                    >
                       <span className="hr-mini-dot" /> {statusLabel[exp.status] ?? exp.status}
                     </Badge>
                   </td>
                   <td>
-                    <Button variant="ghost" size="icon" className="min-h-9 min-w-9" aria-label="More options">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="min-h-9 min-w-9"
+                      aria-label="More options"
+                    >
                       <MoreHorizontal className="size-4" />
                     </Button>
                   </td>
@@ -213,7 +240,11 @@ export default function BillsExpenses() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <EmptyState icon={WalletCards} title="No expenses found" subtitle="Adjust your filters." />
+            <EmptyState
+              icon={WalletCards}
+              title="No expenses found"
+              subtitle="Adjust your filters."
+            />
           )}
         </div>
       </section>

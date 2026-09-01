@@ -68,7 +68,9 @@ export default function Tasks() {
           { label: "Completed", value: countByStatus("COMPLETED"), tone: "lime" },
         ].map((s) => (
           <div key={s.label} className="hr-card hr-metric-card">
-            <p className={`font-display text-[32px] font-black leading-none tracking-tight hr-tone-${s.tone}`}>
+            <p
+              className={`font-display text-[32px] font-black leading-none tracking-tight hr-tone-${s.tone}`}
+            >
               {s.value}
             </p>
             <p className="mt-2 text-sm font-medium text-foreground">{s.label}</p>
@@ -125,7 +127,9 @@ export default function Tasks() {
               <SelectContent>
                 <SelectItem value="all">Status: All</SelectItem>
                 {taskStatuses.map((s) => (
-                  <SelectItem key={s} value={s}>{statusLabel[s]}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {statusLabel[s]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -136,11 +140,15 @@ export default function Tasks() {
               <SelectContent>
                 <SelectItem value="all">Priority: All</SelectItem>
                 {taskPriorities.map((p) => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="default" size="sm">+ New Task</Button>
+            <Button variant="default" size="sm">
+              + New Task
+            </Button>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -171,7 +179,9 @@ export default function Tasks() {
                   <td>
                     <div className="flex items-center gap-2">
                       <Avatar className="size-7 rounded-lg">
-                        <AvatarFallback className={`hr-avatar text-[10px] ${toneClass(task.assignedToTone)}`}>
+                        <AvatarFallback
+                          className={`hr-avatar text-[10px] ${toneClass(task.assignedToTone)}`}
+                        >
                           {task.assignedToInitials}
                         </AvatarFallback>
                       </Avatar>
@@ -179,7 +189,9 @@ export default function Tasks() {
                     </div>
                   </td>
                   <td>
-                    <Badge className={`hr-status-badge ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}>
+                    <Badge
+                      className={`hr-status-badge ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
+                    >
                       <span className="hr-mini-dot" /> {task.priority}
                     </Badge>
                   </td>
@@ -197,7 +209,9 @@ export default function Tasks() {
                     </div>
                   </td>
                   <td>
-                    <Badge className={`hr-status-badge ${toneClass(statusToneMap[task.status] ?? "cyan")}`}>
+                    <Badge
+                      className={`hr-status-badge ${toneClass(statusToneMap[task.status] ?? "cyan")}`}
+                    >
                       <span className="hr-mini-dot" /> {statusLabel[task.status]}
                     </Badge>
                   </td>

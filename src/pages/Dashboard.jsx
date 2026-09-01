@@ -252,11 +252,7 @@ function AttendanceOverview({ range, onRangeChange, chartData }) {
       </div>
       <div className="mt-6 h-60 w-full" aria-label={`${range} attendance chart`}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            barGap={5}
-            margin={{ top: 6, right: 4, left: -20, bottom: 0 }}
-          >
+          <BarChart data={chartData} barGap={5} margin={{ top: 6, right: 4, left: -20, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--hr-line-soft)" strokeDasharray="3 3" />
             <XAxis
               dataKey="day"
@@ -603,10 +599,34 @@ function RecentActivity() {
 // ---------------------------------------------------------------------------
 function QuickActions({ onNavigate }) {
   const actions = [
-    { label: "Add Employee", helper: "New hire onboarding", icon: UserPlus, tone: "coral", to: "/employees" },
-    { label: "Mark Attendance", helper: "Log today's presence", icon: Clock3, tone: "cyan", to: "/attendance" },
-    { label: "Review Bills", helper: "7 awaiting approval", icon: WalletCards, tone: "amber", to: "/bills" },
-    { label: "Review Leave", helper: "4 requests pending", icon: CalendarDays, tone: "lime", to: "/leave-management" },
+    {
+      label: "Add Employee",
+      helper: "New hire onboarding",
+      icon: UserPlus,
+      tone: "coral",
+      to: "/employees",
+    },
+    {
+      label: "Mark Attendance",
+      helper: "Log today's presence",
+      icon: Clock3,
+      tone: "cyan",
+      to: "/attendance",
+    },
+    {
+      label: "Review Bills",
+      helper: "7 awaiting approval",
+      icon: WalletCards,
+      tone: "amber",
+      to: "/bills",
+    },
+    {
+      label: "Review Leave",
+      helper: "4 requests pending",
+      icon: CalendarDays,
+      tone: "lime",
+      to: "/leave-management",
+    },
   ];
 
   return (

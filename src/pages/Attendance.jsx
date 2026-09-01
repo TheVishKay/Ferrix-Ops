@@ -1,13 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CalendarDays, Clock3, Search } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -54,7 +46,10 @@ export default function Attendance() {
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
       {/* Summary cards */}
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Today's attendance summary">
+      <section
+        className="grid grid-cols-2 gap-4 md:grid-cols-4"
+        aria-label="Today's attendance summary"
+      >
         {[
           { label: "Total Today", value: totalToday, tone: "cyan" },
           { label: "Present", value: presentCount, tone: "lime" },
@@ -81,7 +76,11 @@ export default function Attendance() {
               </h2>
             </div>
             <div className="mt-3 flex flex-wrap gap-4">
-              {[["lime", "Present"], ["coral", "Absent"], ["amber", "Leave"]].map(([tone, label]) => (
+              {[
+                ["lime", "Present"],
+                ["coral", "Absent"],
+                ["amber", "Leave"],
+              ].map(([tone, label]) => (
                 <span key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className={`hr-dot hr-tone-${tone}`} />
                   {label}
@@ -105,10 +104,23 @@ export default function Attendance() {
         </div>
         <div className="mt-6 h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} barGap={5} margin={{ top: 6, right: 4, left: -20, bottom: 0 }}>
+            <BarChart
+              data={chartData}
+              barGap={5}
+              margin={{ top: 6, right: 4, left: -20, bottom: 0 }}
+            >
               <CartesianGrid vertical={false} stroke="var(--hr-line-soft)" strokeDasharray="3 3" />
-              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "var(--hr-muted)", fontSize: 11 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--hr-muted)", fontSize: 10 }} />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "var(--hr-muted)", fontSize: 11 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "var(--hr-muted)", fontSize: 10 }}
+              />
               <Tooltip cursor={{ fill: "var(--hr-surface-muted)" }} />
               <Bar dataKey="present" stackId="a" fill="var(--hr-lime)" radius={[0, 0, 3, 3]} />
               <Bar dataKey="leave" stackId="a" fill="var(--hr-amber)" />
@@ -144,7 +156,11 @@ export default function Attendance() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Department: All</SelectItem>
-                {departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                {departments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={status} onValueChange={setStatus}>
@@ -196,7 +212,9 @@ export default function Attendance() {
                   <td>{row.checkOut}</td>
                   <td>{row.hours}</td>
                   <td>
-                    <Badge className={`hr-status-badge hr-tone-${statusToneMap[row.status] ?? "cyan"}`}>
+                    <Badge
+                      className={`hr-status-badge hr-tone-${statusToneMap[row.status] ?? "cyan"}`}
+                    >
                       <span className="hr-mini-dot" /> {row.status}
                     </Badge>
                   </td>
