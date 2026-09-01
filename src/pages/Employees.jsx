@@ -133,8 +133,8 @@ export default function Employees() {
             tone: "lime",
           },
           {
-            label: "Inactive",
-            value: employeesData.filter((e) => e.employment_status === "INACTIVE").length,
+            label: "Inactive / Exited",
+            value: employeesData.filter((e) => e.employment_status !== "ACTIVE").length,
             tone: "coral",
           },
           { label: "Departments", value: departmentsData.length, tone: "violet" },

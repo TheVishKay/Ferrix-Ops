@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { ROLES } from "../../constants/roles";
 import {
   Activity,
   Bell,
@@ -21,12 +22,17 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Employees", icon: Users, to: "/employees" },
+  {
+    label: "Employees",
+    icon: Users,
+    to: "/employees",
+    allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
+  },
   { label: "Attendance", icon: Clock3, to: "/attendance" },
   { label: "Leave Management", icon: CalendarDays, to: "/leave-management" },
   { label: "Bills & Expenses", icon: WalletCards, to: "/bills" },
   { label: "Tasks", icon: CheckSquare, to: "/tasks" },
-  { label: "Reports", icon: Activity, to: "/reports" },
+  { label: "Reports", icon: Activity, to: "/reports", allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS] },
   { label: "Notifications", icon: Bell, to: "/notifications" },
   { label: "Settings", icon: Settings, to: "/settings" },
 ];
@@ -48,6 +54,12 @@ export default function Sidebar({ mobileOpen, onClose }) {
   const displayRole = profile?.role
     ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).toLowerCase()
     : "No Role Assigned";
+
+  const visibleNavItems = navItems.filter((item) => {
+    if (!item.allowedRoles) return true;
+    if (!profile) return false;
+    return item.allowedRoles.includes(profile.role);
+  });
 
   return (
     <>
@@ -95,7 +107,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
 
         {/* Nav items */}
         <nav className="flex flex-col gap-1" aria-label="Primary navigation">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink

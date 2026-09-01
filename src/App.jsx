@@ -26,6 +26,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import RoleRoute from "./components/auth/RoleRoute";
+import { ROLES } from "./constants/roles";
 
 // Each route entry maps a path to its page component and the header props
 // that <AppLayout> forwards to <Header>.
@@ -49,6 +51,7 @@ const routes = [
       icon: Users,
       tone: "cyan",
     },
+    allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   {
     path: "/attendance",
@@ -99,6 +102,7 @@ const routes = [
       icon: Activity,
       tone: "lime",
     },
+    allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   {
     path: "/notifications",
@@ -127,11 +131,19 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route element={<ProtectedRoute />}>
-        {routes.map(({ path, element, header }) => (
-          <Route key={path} element={<AppLayout headerProps={header} />}>
-            <Route path={path} element={element} />
-          </Route>
-        ))}
+        {routes.map(({ path, element, header, allowedRoles }) => {
+          const routeElement = allowedRoles ? (
+            <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>
+          ) : (
+            element
+          );
+
+          return (
+            <Route key={path} element={<AppLayout headerProps={header} />}>
+              <Route path={path} element={routeElement} />
+            </Route>
+          );
+        })}
         {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
         <Route
           element={
