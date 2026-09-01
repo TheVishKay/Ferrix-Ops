@@ -152,47 +152,6 @@ END;
 $$;
 
 
--- -----------------------------------------------------------------------------
--- Returns the application role of the currently authenticated user.
---
--- SECURITY DEFINER:
---
---   This function executes as the function owner (postgres), which bypasses
---   RLS on public.profiles. This is intentional and critical:
---
---   RLS policies on most tables call get_my_role() to check access.
---   If get_my_role() were subject to profiles RLS, and profiles RLS
---   also called get_my_role(), we would have infinite recursion.
---
---   SECURITY DEFINER breaks the cycle safely.
---
--- SET search_path = '':
---
---   Prevents search_path injection attacks.
---
--- Defined here (Migration 001) so it is available without
--- forward dependencies in Migrations 002, 003, and 004.
--- -----------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION public.get_my_role()
-
-RETURNS public.app_role
-
-LANGUAGE sql
-
-STABLE
-
-SECURITY DEFINER
-
-SET search_path = ''
-
-AS $$
-    SELECT role
-    FROM public.profiles
-    WHERE id = auth.uid();
-$$;
-
-
 -- =============================================================================
 -- PROFILES
 --
@@ -245,6 +204,39 @@ CREATE TRIGGER profiles_updated_at
 BEFORE UPDATE ON public.profiles
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_updated_at();
+
+
+-- -----------------------------------------------------------------------------
+-- Returns the application role of the currently authenticated user.
+--
+-- SECURITY DEFINER:
+--   Executes as the function owner (postgres), bypassing RLS on
+--   public.profiles. This is intentional — it prevents infinite recursion
+--   when RLS policies on other tables call get_my_role(), which would
+--   otherwise trigger profiles RLS, which calls get_my_role() again.
+--
+-- Placed here (after public.profiles is created) because LANGUAGE sql
+-- functions are validated at CREATE time and require the referenced
+-- table to already exist.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.get_my_role()
+
+RETURNS public.app_role
+
+LANGUAGE sql
+
+STABLE
+
+SECURITY DEFINER
+
+SET search_path = ''
+
+AS $$
+    SELECT role
+    FROM public.profiles
+    WHERE id = auth.uid();
+$$;
 
 
 -- =============================================================================
