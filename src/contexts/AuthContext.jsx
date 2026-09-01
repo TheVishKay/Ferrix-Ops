@@ -48,7 +48,15 @@ export function AuthProvider({ children }) {
             if (!isMounted || currentFetchId !== fetchSessionId.current) return;
 
             if (error) {
-              console.error("Error fetching profile:", error.message);
+              console.error("Error fetching profile:", error);
+              console.error("Profile fetch details:", {
+                userId: currentSession.user.id,
+                errorCode: error.code,
+                errorMessage: error.message,
+                errorDetails: error.details,
+                errorHint: error.hint,
+              });
+
               setProfile(null);
             } else {
               setProfile(data);
