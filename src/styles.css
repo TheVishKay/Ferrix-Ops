@@ -156,13 +156,16 @@
 .hr-app {
   min-height: 100vh;
 }
+
 .font-display {
   font-family: "Fraunces", Georgia, serif;
 }
+
 .hr-sidebar {
   background: var(--sidebar);
   color: var(--sidebar-foreground);
 }
+
 .hr-card {
   border: 1px solid var(--hr-line);
   border-radius: 14px;
@@ -170,9 +173,11 @@
   padding: 20px;
   box-shadow: 0 12px 30px -28px oklch(0.22 0.035 264 / 55%);
 }
+
 .hr-metric-card {
   min-width: 0;
 }
+
 .hr-logo,
 .hr-mark {
   display: grid;
@@ -180,14 +185,17 @@
   flex: none;
   border-radius: 12px;
 }
+
 .hr-logo {
   height: 38px;
   width: 38px;
 }
+
 .hr-mark {
   height: 34px;
   width: 34px;
 }
+
 .hr-footer-mark {
   display: inline-grid;
   height: 22px;
@@ -195,36 +203,43 @@
   place-items: center;
   border-radius: 7px;
 }
+
 .hr-tone-cyan {
   --hr-tone: var(--hr-cyan);
   --hr-tone-soft: color-mix(in oklab, var(--hr-cyan) 12%, transparent);
   color: var(--hr-tone);
 }
+
 .hr-tone-lime {
   --hr-tone: var(--hr-lime);
   --hr-tone-soft: color-mix(in oklab, var(--hr-lime) 14%, transparent);
   color: var(--hr-tone);
 }
+
 .hr-tone-coral {
   --hr-tone: var(--hr-coral);
   --hr-tone-soft: color-mix(in oklab, var(--hr-coral) 12%, transparent);
   color: var(--hr-tone);
 }
+
 .hr-tone-amber {
   --hr-tone: var(--hr-amber);
   --hr-tone-soft: color-mix(in oklab, var(--hr-amber) 14%, transparent);
   color: var(--hr-tone);
 }
+
 .hr-tone-violet {
   --hr-tone: var(--hr-violet);
   --hr-tone-soft: color-mix(in oklab, var(--hr-violet) 12%, transparent);
   color: var(--hr-tone);
 }
+
 .hr-tone-slate {
   --hr-tone: var(--hr-muted);
   --hr-tone-soft: color-mix(in oklab, var(--hr-muted) 12%, transparent);
   color: var(--hr-tone);
 }
+
 .hr-logo,
 .hr-mark,
 .hr-icon-box,
@@ -232,17 +247,21 @@
 .hr-footer-mark {
   background: var(--hr-tone-soft);
 }
+
 .hr-logo {
   background: linear-gradient(135deg, var(--hr-coral), var(--hr-amber));
   color: var(--primary-foreground);
 }
+
 .hr-header {
   box-shadow: 0 8px 20px -25px var(--foreground);
 }
+
 .hr-hairline {
   height: 1px;
   background: color-mix(in oklab, var(--sidebar-foreground) 13%, transparent);
 }
+
 .hr-nav-item {
   min-height: 42px;
   width: 100%;
@@ -250,20 +269,21 @@
   border: 1px solid transparent;
   color: color-mix(in oklab, var(--sidebar-foreground) 70%, transparent);
 }
+
 .hr-nav-item:hover {
   background: color-mix(in oklab, var(--sidebar-foreground) 8%, transparent);
   color: var(--sidebar-foreground);
 }
+
 .hr-nav-active {
   color: var(--sidebar-foreground);
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklab, var(--hr-coral) 22%, transparent),
-    color-mix(in oklab, var(--hr-amber) 11%, transparent)
-  );
+  background: linear-gradient(90deg,
+      color-mix(in oklab, var(--hr-coral) 22%, transparent),
+      color-mix(in oklab, var(--hr-amber) 11%, transparent));
   border-color: color-mix(in oklab, var(--hr-coral) 45%, transparent);
   box-shadow: inset 0 0 22px color-mix(in oklab, var(--hr-coral) 10%, transparent);
 }
+
 .hr-nav-count {
   display: inline-grid;
   min-height: 20px;
@@ -274,6 +294,7 @@
   color: var(--primary-foreground);
   font-size: 10px;
 }
+
 .hr-search,
 .hr-table-search {
   align-items: center;
@@ -283,12 +304,15 @@
   background: var(--hr-surface-muted);
   padding: 3px 10px;
 }
+
 .hr-search {
   width: 250px;
 }
+
 .hr-table-search {
   width: 170px;
 }
+
 .hr-notification-dot {
   position: absolute;
   right: 9px;
@@ -299,6 +323,7 @@
   background: var(--hr-coral);
   box-shadow: 0 0 0 3px var(--card);
 }
+
 .hr-icon-box {
   display: grid;
   height: 40px;
@@ -308,18 +333,21 @@
   border: 1px solid color-mix(in oklab, var(--hr-tone) 28%, transparent);
   border-radius: 11px;
 }
+
 .hr-soft-badge,
 .hr-status-badge {
   border-color: color-mix(in oklab, var(--hr-tone) 32%, transparent);
   background: var(--hr-tone-soft);
   color: var(--hr-tone);
 }
+
 .hr-soft-badge {
   max-width: 110px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
 .hr-mini-dot,
 .hr-dot {
   display: inline-block;
@@ -327,14 +355,17 @@
   border-radius: 999px;
   background: currentColor;
 }
+
 .hr-mini-dot {
   height: 6px;
   width: 6px;
 }
+
 .hr-dot {
   height: 8px;
   width: 8px;
 }
+
 .hr-section-index {
   display: inline-grid;
   height: 24px;
@@ -346,6 +377,7 @@
   font-size: 10px;
   font-weight: 700;
 }
+
 .hr-segmented {
   display: inline-flex;
   gap: 2px;
@@ -354,13 +386,16 @@
   background: var(--hr-surface-muted);
   padding: 3px;
 }
+
 .hr-segmented button {
   color: var(--muted-foreground);
 }
+
 .hr-segment-active {
   background: var(--primary) !important;
   color: var(--primary-foreground) !important;
 }
+
 .hr-action-row {
   display: flex;
   align-items: center;
@@ -370,11 +405,13 @@
   background: var(--hr-surface-muted);
   padding: 12px;
 }
+
 .hr-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
+
 .hr-table th {
   padding: 12px 16px;
   text-align: left;
@@ -384,29 +421,35 @@
   text-transform: uppercase;
   letter-spacing: 0.09em;
 }
+
 .hr-table td {
   padding: 13px 16px;
   color: var(--muted-foreground);
   border-bottom: 1px solid var(--hr-line-soft);
   vertical-align: middle;
 }
+
 .hr-table tbody tr:hover {
   background: var(--hr-surface-muted);
 }
+
 .hr-table tbody tr:last-child td {
   border-bottom: 0;
 }
+
 .hr-avatar {
   border-radius: 11px;
   font-size: 11px;
   font-weight: 800;
 }
+
 .hr-expense-stat {
   border: 1px solid color-mix(in oklab, var(--hr-tone) 24%, var(--hr-line));
   border-radius: 10px;
   background: var(--hr-tone-soft);
   padding: 11px;
 }
+
 .hr-quick-action {
   min-height: 96px;
   align-items: flex-start;
@@ -416,14 +459,291 @@
   background: var(--hr-tone-soft);
   padding: 14px;
 }
-.hr-quick-action > svg {
+
+.hr-quick-action>svg {
   color: var(--hr-tone);
 }
+
 @media (max-width: 639px) {
   .hr-card {
     padding: 16px;
   }
+
   .hr-table-search {
     width: 100%;
   }
+}
+
+/* =============================================================================
+   ATTENDANCE CORRECTION MODAL
+   ============================================================================= */
+
+.hr-correction-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  border: 1px solid var(--hr-line);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: 0 24px 60px -12px oklch(0.22 0.035 264 / 40%);
+  padding: 0;
+  width: min(520px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+
+.hr-correction-modal::backdrop {
+  background: oklch(0.22 0.035 264 / 65%);
+  backdrop-filter: blur(3px);
+}
+
+.hr-correction-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 0;
+}
+
+.hr-correction-close {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  width: 28px;
+  border-radius: 8px;
+  flex: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.hr-correction-close:hover:not(:disabled) {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.hr-correction-close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hr-correction-modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hr-correction-context {
+  border: 1px solid var(--hr-line-soft);
+  border-radius: 10px;
+  background: var(--hr-surface-muted);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hr-correction-context-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.hr-correction-context-row .label {
+  color: var(--muted-foreground);
+  min-width: 130px;
+  font-size: 12px;
+}
+
+.hr-correction-context-row .value {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.hr-correction-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hr-correction-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hr-correction-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hr-correction-label-hint {
+  font-weight: 400;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.hr-correction-label-required {
+  font-weight: 400;
+  color: var(--hr-coral);
+  font-size: 11px;
+}
+
+.hr-correction-input,
+.hr-correction-select,
+.hr-correction-textarea {
+  width: 100%;
+  border: 1px solid var(--input);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.hr-correction-input:focus,
+.hr-correction-select:focus,
+.hr-correction-textarea:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 20%, transparent);
+}
+
+.hr-correction-input:disabled,
+.hr-correction-select:disabled,
+.hr-correction-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hr-correction-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.hr-correction-validation-error {
+  font-size: 12px;
+  color: var(--destructive);
+}
+
+.hr-correction-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--destructive) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--destructive) 20%, transparent);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--destructive);
+}
+
+.hr-correction-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--hr-line-soft);
+}
+
+/* =============================================================================
+   OWNER CORRECTION REVIEW CARDS
+   ============================================================================= */
+
+.hr-review-card {
+  padding: 20px;
+  border-bottom: 1px solid var(--hr-line-soft);
+}
+
+.hr-review-card:last-child {
+  border-bottom: 0;
+}
+
+.hr-review-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.hr-review-compare-col {
+  border: 1px solid var(--hr-line-soft);
+  border-radius: 9px;
+  background: var(--hr-surface-muted);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hr-review-compare-col--requested {
+  background: color-mix(in oklab, var(--hr-lime) 9%, transparent);
+  border-color: color-mix(in oklab, var(--hr-lime) 25%, transparent);
+}
+
+.hr-review-compare-heading {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin-bottom: 5px;
+}
+
+.hr-review-compare-row {
+  font-size: 12px;
+  color: var(--foreground);
+  display: flex;
+  gap: 4px;
+}
+
+.hr-review-compare-row .key {
+  color: var(--muted-foreground);
+  min-width: 68px;
+  font-size: 11px;
+}
+
+.hr-correction-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.hr-correction-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hr-correction-action-btn--correct {
+  background: color-mix(in oklab, var(--hr-cyan) 12%, transparent);
+  color: var(--hr-cyan);
+  border-color: color-mix(in oklab, var(--hr-cyan) 28%, transparent);
+}
+
+.hr-correction-action-btn--correct:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--hr-cyan) 20%, transparent);
+}
+
+.hr-correction-action-btn--pending {
+  background: color-mix(in oklab, var(--hr-amber) 12%, transparent);
+  color: var(--hr-amber);
+  border-color: color-mix(in oklab, var(--hr-amber) 28%, transparent);
+  cursor: default;
 }

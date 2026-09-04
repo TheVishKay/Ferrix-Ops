@@ -1,5 +1,17 @@
-import { useMemo, useState, useEffect } from "react";
-import { CalendarDays, Clock3, Search, Loader2, Play, Square, AlertCircle } from "lucide-react";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import {
+  CalendarDays,
+  Clock3,
+  Search,
+  Loader2,
+  Play,
+  Square,
+  AlertCircle,
+  Edit3,
+  CheckCircle2,
+  XCircle,
+  Clock,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +28,15 @@ import { EmptyState } from "@/components/shared";
 
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { ROLES } from "@/constants/roles";
+import AttendanceCorrectionModal from "@/components/attendance/AttendanceCorrectionModal";
+
+// =============================================================================
+// Constants / pure helpers
+// =============================================================================
 
 const toneClass = (t) => `hr-tone-${t}`;
+
 const statusToneMap = {
   PRESENT: "lime",
   HALF_DAY: "amber",
@@ -50,8 +69,168 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
   hour12: true,
 });
 
+const formatDT = (iso) => (iso ? timeFormatter.format(new Date(iso)) : "—");
+const formatDate = (d) => d || "—";
+
+// =============================================================================
+// CorrectionReviewCard — OWNER review queue card (local component)
+// =============================================================================
+
+function CorrectionReviewCard({ request, remarks, onRemarksChange, onApprove, onReject, loading }) {
+  const emp = request.employees;
+  // attendance_records is the embedded original attendance data.
+  // PostgREST embeds it under "attendance_records" per the FK table name.
+  // request.status is the CORRECTION request status (PENDING/APPROVED/REJECTED).
+  // request.attendance_records.status is the ORIGINAL attendance status.
+  const ar = request.attendance_records;
+
+  const empName = emp ? `${emp.first_name} ${emp.last_name}` : "Unknown";
+  const initials = emp
+    ? `${emp.first_name?.[0] ?? ""}${emp.last_name?.[0] ?? ""}`.toUpperCase()
+    : "?";
+  const tone = getTone(emp?.employee_code ?? "");
+
+  return (
+    <div className="hr-review-card">
+      {/* Employee header */}
+      <div className="flex items-start gap-3 mb-4">
+        <Avatar className="size-9 rounded-xl shrink-0">
+          <AvatarFallback className={`hr-avatar ${toneClass(tone)}`}>{initials}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-foreground text-sm leading-tight">{empName}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {emp?.employee_code ?? "—"}
+            {" · Submitted "}
+            {new Date(request.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })}
+          </p>
+        </div>
+        <Badge className="hr-status-badge hr-tone-amber shrink-0">
+          <span className="hr-mini-dot" /> Pending
+        </Badge>
+      </div>
+
+      {/* Original vs Requested comparison */}
+      <div className="hr-review-compare">
+        <div className="hr-review-compare-col">
+          <p className="hr-review-compare-heading">Original</p>
+          <div className="hr-review-compare-row">
+            <span className="key">Date</span>
+            <span>{formatDate(ar?.attendance_date)}</span>
+          </div>
+          <div className="hr-review-compare-row">
+            <span className="key">Status</span>
+            <span>{ar?.status ? (displayStatus[ar.status] ?? ar.status) : "—"}</span>
+          </div>
+          <div className="hr-review-compare-row">
+            <span className="key">In</span>
+            <span>{formatDT(ar?.check_in_at)}</span>
+          </div>
+          <div className="hr-review-compare-row">
+            <span className="key">Out</span>
+            <span>{formatDT(ar?.check_out_at)}</span>
+          </div>
+        </div>
+
+        <div className="hr-review-compare-col hr-review-compare-col--requested">
+          <p className="hr-review-compare-heading">Requested</p>
+          <div className="hr-review-compare-row">
+            <span className="key">Status</span>
+            <span>
+              {request.requested_status ? (
+                (displayStatus[request.requested_status] ?? request.requested_status)
+              ) : (
+                <span className="text-muted-foreground italic text-xs">no change</span>
+              )}
+            </span>
+          </div>
+          <div className="hr-review-compare-row">
+            <span className="key">In</span>
+            <span>
+              {request.requested_check_in ? (
+                formatDT(request.requested_check_in)
+              ) : (
+                <span className="text-muted-foreground italic text-xs">no change</span>
+              )}
+            </span>
+          </div>
+          <div className="hr-review-compare-row">
+            <span className="key">Out</span>
+            <span>
+              {request.requested_check_out ? (
+                formatDT(request.requested_check_out)
+              ) : (
+                <span className="text-muted-foreground italic text-xs">no change</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Reason */}
+      <div className="mb-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          Reason
+        </p>
+        <p className="text-sm text-foreground">{request.reason}</p>
+      </div>
+
+      {/* Review remarks + actions */}
+      <div className="flex flex-col gap-3">
+        <textarea
+          className="hr-correction-textarea"
+          placeholder="Review remarks (optional)…"
+          rows={2}
+          value={remarks}
+          disabled={loading}
+          onChange={(e) => onRemarksChange(e.target.value)}
+          aria-label="Review remarks"
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={onApprove}
+            disabled={loading}
+            className="gap-1.5 bg-[var(--hr-lime)] text-lime-950 hover:bg-[var(--hr-lime)]/90"
+          >
+            {loading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            Approve
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onReject}
+            disabled={loading}
+            className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10"
+          >
+            {loading ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
+            Reject
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Main Attendance component
+// =============================================================================
+
 export default function Attendance() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+
+  // ---------------------------------------------------------------------------
+  // Phase 3A state (preserved exactly)
+  // ---------------------------------------------------------------------------
+
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -64,7 +243,38 @@ export default function Attendance() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchAttendance = async () => {
+  // ---------------------------------------------------------------------------
+  // Phase 3B state
+  // ---------------------------------------------------------------------------
+
+  // Employee: PENDING correction map — attendance_record_id → { id, status }
+  const [correctionMap, setCorrectionMap] = useState({});
+
+  // OWNER: enriched pending queue
+  const [ownerQueue, setOwnerQueue] = useState([]);
+
+  // Correction modal
+  const [correctionModalRecord, setCorrectionModalRecord] = useState(null);
+  const [correctionForm, setCorrectionForm] = useState({
+    requestedStatus: "",
+    requestedCheckIn: "",
+    requestedCheckOut: "",
+    reason: "",
+  });
+  const [correctionSubmitting, setCorrectionSubmitting] = useState(false);
+  const [correctionError, setCorrectionError] = useState(null);
+
+  // OWNER review state
+  const [reviewLoadingId, setReviewLoadingId] = useState(null);
+  // Per-request remarks: { [requestId]: string }
+  const [reviewRemarks, setReviewRemarks] = useState({});
+
+  // ---------------------------------------------------------------------------
+  // fetchAttendance — returns the fetched records array so callers can chain
+  // into fetchCorrectionData without relying on potentially stale state.
+  // ---------------------------------------------------------------------------
+
+  const fetchAttendance = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -75,19 +285,19 @@ export default function Attendance() {
           .from("attendance_records")
           .select(
             `
-          id,
-          attendance_date,
-          check_in_at,
-          check_out_at,
-          status,
-          employees (
             id,
-            employee_code,
-            first_name,
-            last_name,
-            departments ( name )
-          )
-        `,
+            attendance_date,
+            check_in_at,
+            check_out_at,
+            status,
+            employees (
+              id,
+              employee_code,
+              first_name,
+              last_name,
+              departments ( name )
+            )
+          `,
           )
           .order("attendance_date", { ascending: false })
           .order("created_at", { ascending: false }),
@@ -112,18 +322,126 @@ export default function Attendance() {
           setEmployeeRecord(null);
         }
       }
+
+      return attRes.data;
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to load attendance data.");
+      return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  // ---------------------------------------------------------------------------
+  // fetchCorrectionData — role-aware, kept separate from attendance fetching.
+  //
+  // OWNER    → query full pending queue with employee + attendance_record context
+  // EMPLOYEE → query own PENDING correction map for the supplied records
+  // ACCOUNTS → intentionally no query (no SELECT policy on correction_requests)
+  // ---------------------------------------------------------------------------
+
+  const fetchCorrectionData = useCallback(
+    async (records) => {
+      if (!user || !profile) return;
+
+      try {
+        if (profile.role === ROLES.OWNER) {
+          // PostgREST embeds related rows using the FK target table name:
+          //   employee_id  →  employees
+          //   attendance_record_id  →  attendance_records
+          // Both FKs are defined in migration 002.
+          const { data, error: qErr } = await supabase
+            .from("attendance_correction_requests")
+            .select(
+              `
+              id,
+              requested_status,
+              requested_check_in,
+              requested_check_out,
+              reason,
+              status,
+              created_at,
+              employees (
+                id,
+                first_name,
+                last_name,
+                employee_code
+              ),
+              attendance_records (
+                id,
+                attendance_date,
+                status,
+                check_in_at,
+                check_out_at
+              )
+            `,
+            )
+            .eq("status", "PENDING")
+            .order("created_at", { ascending: true });
+
+          if (qErr) {
+            console.error("Failed to load owner correction queue:", qErr);
+            return;
+          }
+          setOwnerQueue(data ?? []);
+        } else if (profile.role === ROLES.EMPLOYEE) {
+          // Guard: no records → nothing to query.
+          if (!records || records.length === 0) {
+            setCorrectionMap({});
+            return;
+          }
+
+          const recordIds = records.map((r) => r.id);
+
+          const { data, error: qErr } = await supabase
+            .from("attendance_correction_requests")
+            .select("id, attendance_record_id, status")
+            .in("attendance_record_id", recordIds)
+            .eq("status", "PENDING");
+
+          if (qErr) {
+            console.error("Failed to load employee correction data:", qErr);
+            return;
+          }
+
+          const map = {};
+          (data ?? []).forEach((req) => {
+            map[req.attendance_record_id] = { id: req.id, status: req.status };
+          });
+          setCorrectionMap(map);
+        }
+        // ACCOUNTS: no correction request query.
+      } catch (err) {
+        console.error("Unexpected error loading correction data:", err);
+      }
+    },
+    [user, profile],
+  );
+
+  // ---------------------------------------------------------------------------
+  // Initial load — depends on both user and profile.role.
+  //
+  // Why profile.role in deps:
+  //   AuthContext sets user synchronously when auth state changes, then
+  //   fetches profile async. The effect runs first with profile=null
+  //   (fetchCorrectionData skips), then runs again when profile loads,
+  //   at which point the correct role-aware correction query executes.
+  // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    fetchAttendance();
+    if (!user) return;
+    const load = async () => {
+      const records = await fetchAttendance();
+      await fetchCorrectionData(records);
+    };
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, profile?.role]);
+
+  // ---------------------------------------------------------------------------
+  // Phase 3A computed values (preserved exactly)
+  // ---------------------------------------------------------------------------
 
   const mappedRecords = useMemo(() => {
     return attendanceRecords.map((r) => {
@@ -183,6 +501,10 @@ export default function Attendance() {
   const canCheckIn = employeeRecord && !todayRecord;
   const canCheckOut = employeeRecord && todayRecord && todayRecord.status === "INCOMPLETE";
 
+  // ---------------------------------------------------------------------------
+  // Phase 3A handlers (preserved exactly)
+  // ---------------------------------------------------------------------------
+
   const handleCheckIn = async () => {
     try {
       setSubmitting(true);
@@ -213,6 +535,151 @@ export default function Attendance() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Phase 3B: correction modal lifecycle
+  // ---------------------------------------------------------------------------
+
+  const handleOpenCorrectionModal = (record) => {
+    setCorrectionError(null);
+    setCorrectionForm({
+      requestedStatus: "",
+      requestedCheckIn: "",
+      requestedCheckOut: "",
+      reason: "",
+    });
+    setCorrectionModalRecord(record);
+  };
+
+  const handleCloseModal = () => {
+    if (correctionSubmitting) return;
+    setCorrectionModalRecord(null);
+    setCorrectionError(null);
+  };
+
+  const handleFormChange = (patch) => {
+    setCorrectionForm((prev) => ({ ...prev, ...patch }));
+  };
+
+  // ---------------------------------------------------------------------------
+  // Phase 3B: submit correction request
+  //
+  // RPC: request_attendance_correction(
+  //   p_attendance_record_id, p_requested_status,
+  //   p_requested_check_in, p_requested_check_out, p_reason
+  // )
+  // Argument names verified against migration 002 SQL.
+  // No direct table mutation. RPC is the only workflow mutation entry point.
+  // ---------------------------------------------------------------------------
+
+  const handleSubmitCorrection = async (payload) => {
+    if (!correctionModalRecord) return;
+    try {
+      setCorrectionSubmitting(true);
+      setCorrectionError(null);
+
+      const { error: rpcError } = await supabase.rpc("request_attendance_correction", {
+        p_attendance_record_id: correctionModalRecord.id,
+        p_requested_status: payload.p_requested_status,
+        p_requested_check_in: payload.p_requested_check_in,
+        p_requested_check_out: payload.p_requested_check_out,
+        p_reason: payload.p_reason,
+      });
+
+      if (rpcError) {
+        let msg = rpcError.message || "Failed to submit correction request.";
+
+        // Translate known DB/constraint errors to user-friendly messages.
+        if (
+          msg.includes("unique_pending_correction_request") ||
+          msg.toLowerCase().includes("unique constraint") ||
+          msg.toLowerCase().includes("duplicate")
+        ) {
+          msg = "A correction request is already pending for this attendance record.";
+        } else if (msg.includes("Cannot request correction for another")) {
+          msg = "You can only request corrections for your own attendance records.";
+        } else if (msg.includes("Correction reason is required")) {
+          msg = "A reason is required to submit a correction request.";
+        } else if (msg.includes("check-out time cannot be before")) {
+          msg = "Check-out time cannot be before check-in time.";
+        } else if (msg.includes("ABSENT or LEAVE status cannot include")) {
+          msg = "Corrections for Absent or Leave status cannot include timestamps.";
+        }
+
+        setCorrectionError(msg);
+        return; // keep modal open
+      }
+
+      // Success: close modal, refresh correction data only.
+      // Attendance records are unchanged by the request RPC.
+      setCorrectionModalRecord(null);
+      setCorrectionError(null);
+      await fetchCorrectionData(attendanceRecords);
+    } catch (err) {
+      console.error(err);
+      setCorrectionError(err.message || "Failed to submit correction request.");
+    } finally {
+      setCorrectionSubmitting(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Phase 3B: OWNER reviews a correction request
+  //
+  // RPC: review_attendance_correction(p_request_id, p_approve, p_remarks)
+  // Argument names verified against migration 002 SQL.
+  // No direct table mutation. RPC is the only review mutation entry point.
+  // ---------------------------------------------------------------------------
+
+  const handleReviewCorrection = async (requestId, approve) => {
+    try {
+      setReviewLoadingId(requestId);
+
+      const { error: rpcError } = await supabase.rpc("review_attendance_correction", {
+        p_request_id: requestId,
+        p_approve: approve,
+        // Send null when no remarks — RPC signature: p_remarks TEXT DEFAULT NULL
+        p_remarks: reviewRemarks[requestId]?.trim() || null,
+      });
+
+      if (rpcError) {
+        let msg = rpcError.message || "Failed to review correction request.";
+        if (msg.includes("already been reviewed")) {
+          msg = "This request has already been reviewed.";
+        } else if (msg.includes("Only OWNER")) {
+          msg = "Only the Owner can review correction requests.";
+        }
+        // Preserve "Invalid correction: …" messages verbatim — they are informative.
+        setError(msg);
+        return;
+      }
+
+      // Clear remarks for this request.
+      setReviewRemarks((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+
+      if (approve) {
+        // Approval modifies the attendance record — refresh attendance + corrections.
+        const records = await fetchAttendance();
+        await fetchCorrectionData(records);
+      } else {
+        // Rejection only changes the correction request status.
+        await fetchCorrectionData(attendanceRecords);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to review correction request.");
+    } finally {
+      setReviewLoadingId(null);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Summary counts (Phase 3A — preserved exactly)
+  // ---------------------------------------------------------------------------
+
   const todayRecords = attendanceRecords.filter((r) => r.attendance_date === todayStr);
   const totalToday = todayRecords.length;
   const presentCount = todayRecords.filter((r) => r.status === "PRESENT").length;
@@ -221,8 +688,13 @@ export default function Attendance() {
     (r) => r.status === "ABSENT" || r.status === "LEAVE",
   ).length;
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+      {/* Global error banner */}
       {error && (
         <div className="mb-4 flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
           <AlertCircle className="size-4" />
@@ -230,7 +702,9 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* Action Card for Check-in / Check-out */}
+      {/* ------------------------------------------------------------------- */}
+      {/* Check-In / Check-Out action card (Phase 3A — unchanged)             */}
+      {/* ------------------------------------------------------------------- */}
       {(canCheckIn || canCheckOut) && (
         <section className="hr-card p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -238,7 +712,7 @@ export default function Attendance() {
               <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
                 Attendance Actions
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {canCheckIn ? "You haven't checked in today." : "You are currently checked in."}
               </p>
             </div>
@@ -266,7 +740,9 @@ export default function Attendance() {
         </section>
       )}
 
-      {/* Summary cards */}
+      {/* ------------------------------------------------------------------- */}
+      {/* Summary cards (Phase 3A — unchanged)                                */}
+      {/* ------------------------------------------------------------------- */}
       <section
         className="grid grid-cols-2 gap-4 md:grid-cols-4"
         aria-label="Today's attendance summary"
@@ -286,11 +762,62 @@ export default function Attendance() {
         ))}
       </section>
 
-      {/* Attendance table */}
+      {/* ------------------------------------------------------------------- */}
+      {/* OWNER: Pending correction review queue                              */}
+      {/* Rendered only for OWNER. Invisible to ACCOUNTS and EMPLOYEE.        */}
+      {/* ACCOUNTS cannot query attendance_correction_requests (no RLS policy) */}
+      {/* and therefore this section is not rendered for them.               */}
+      {/* ------------------------------------------------------------------- */}
+      {profile?.role === ROLES.OWNER && (
+        <section className="hr-card p-0">
+          <div className="flex items-center gap-2 border-b border-border p-5">
+            <span className="hr-section-index hr-tone-violet">01</span>
+            <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
+              Pending Correction Requests
+            </h2>
+            {ownerQueue.length > 0 && (
+              <span className="ml-auto rounded-full bg-[var(--hr-amber)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--hr-amber)]">
+                {ownerQueue.length} pending
+              </span>
+            )}
+          </div>
+
+          {ownerQueue.length === 0 ? (
+            <EmptyState
+              icon={CheckCircle2}
+              title="No pending requests"
+              subtitle="All correction requests have been reviewed."
+            />
+          ) : (
+            <div>
+              {ownerQueue.map((req) => (
+                <CorrectionReviewCard
+                  key={req.id}
+                  request={req}
+                  remarks={reviewRemarks[req.id] ?? ""}
+                  onRemarksChange={(val) =>
+                    setReviewRemarks((prev) => ({ ...prev, [req.id]: val }))
+                  }
+                  onApprove={() => handleReviewCorrection(req.id, true)}
+                  onReject={() => handleReviewCorrection(req.id, false)}
+                  loading={reviewLoadingId === req.id}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ------------------------------------------------------------------- */}
+      {/* Attendance log table                                                 */}
+      {/* Phase 3A base preserved; Phase 3B adds the correction action column */}
+      {/* ------------------------------------------------------------------- */}
       <section className="hr-card p-0">
         <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className="hr-section-index hr-tone-coral">01</span>
+            <span className="hr-section-index hr-tone-coral">
+              {profile?.role === ROLES.OWNER ? "02" : "01"}
+            </span>
             <h2 className="font-display text-lg font-bold tracking-tight text-foreground">
               Attendance Log
             </h2>
@@ -349,7 +876,7 @@ export default function Attendance() {
             </div>
           ) : (
             <>
-              <table className="hr-table min-w-[820px]">
+              <table className="hr-table min-w-[900px]">
                 <thead>
                   <tr>
                     <th>Employee</th>
@@ -360,36 +887,87 @@ export default function Attendance() {
                     <th>Check Out</th>
                     <th>Hours</th>
                     <th>Status</th>
+                    {/* Correction column header — only rendered when the current
+                        user has an employee record and may have actionable rows */}
+                    {employeeRecord && <th aria-label="Correction actions"></th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-9 rounded-xl">
-                            <AvatarFallback className={`hr-avatar ${toneClass(row.tone)}`}>
-                              {row.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-foreground">{row.name}</span>
-                        </div>
-                      </td>
-                      <td className="font-mono text-xs text-muted-foreground">{row.employeeId}</td>
-                      <td>{row.department}</td>
-                      <td className="text-xs">{row.attendance_date}</td>
-                      <td className="text-xs">{row.checkIn}</td>
-                      <td className="text-xs">{row.checkOut}</td>
-                      <td className="text-xs font-medium">{row.hours}</td>
-                      <td>
-                        <Badge
-                          className={`hr-status-badge hr-tone-${statusToneMap[row.status] ?? "cyan"}`}
-                        >
-                          <span className="hr-mini-dot" /> {displayStatus[row.status] || row.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((row) => {
+                    // Is this row the current user's own attendance record?
+                    const isOwnRow = !!employeeRecord && row.employees?.id === employeeRecord.id;
+
+                    // Is there a PENDING correction for this record?
+                    const hasPending = !!correctionMap[row.id];
+
+                    return (
+                      <tr key={row.id}>
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="size-9 rounded-xl">
+                              <AvatarFallback className={`hr-avatar ${toneClass(row.tone)}`}>
+                                {row.initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-foreground">{row.name}</span>
+                          </div>
+                        </td>
+                        <td className="font-mono text-xs text-muted-foreground">
+                          {row.employeeId}
+                        </td>
+                        <td>{row.department}</td>
+                        <td className="text-xs">{row.attendance_date}</td>
+                        <td className="text-xs">{row.checkIn}</td>
+                        <td className="text-xs">{row.checkOut}</td>
+                        <td className="text-xs font-medium">{row.hours}</td>
+                        <td>
+                          <Badge
+                            className={`hr-status-badge hr-tone-${statusToneMap[row.status] ?? "cyan"}`}
+                          >
+                            <span className="hr-mini-dot" />{" "}
+                            {displayStatus[row.status] || row.status}
+                          </Badge>
+                        </td>
+
+                        {/* Correction action cell */}
+                        {employeeRecord && (
+                          <td>
+                            {isOwnRow && (
+                              <>
+                                {hasPending ? (
+                                  // PENDING: show indicator, prevent duplicate request.
+                                  // Database unique partial index remains authoritative
+                                  // for race conditions even when this shows.
+                                  <button
+                                    className="hr-correction-action-btn hr-correction-action-btn--pending"
+                                    disabled
+                                    aria-label="Correction request is pending review"
+                                  >
+                                    <Clock className="size-3" />
+                                    Pending
+                                  </button>
+                                ) : (
+                                  // No pending request: allow correction.
+                                  // Race condition still possible (two tabs).
+                                  // handleSubmitCorrection translates the DB
+                                  // unique constraint error gracefully.
+                                  <button
+                                    className="hr-correction-action-btn hr-correction-action-btn--correct"
+                                    onClick={() => handleOpenCorrectionModal(row)}
+                                    disabled={loading || submitting}
+                                    aria-label={`Request correction for ${row.attendance_date}`}
+                                  >
+                                    <Edit3 className="size-3" />
+                                    Correct
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {filtered.length === 0 && (
@@ -403,6 +981,20 @@ export default function Attendance() {
           )}
         </div>
       </section>
+
+      {/* Correction request modal — mounted only when a record is selected.
+          Unmounting on close cleanly resets all dialog state. */}
+      {correctionModalRecord && (
+        <AttendanceCorrectionModal
+          record={correctionModalRecord}
+          form={correctionForm}
+          onFormChange={handleFormChange}
+          onClose={handleCloseModal}
+          onSubmit={handleSubmitCorrection}
+          submitting={correctionSubmitting}
+          error={correctionError}
+        />
+      )}
     </main>
   );
 }
