@@ -22,7 +22,7 @@ WITH CHECK (
         AND emp.user_id = auth.uid()
         AND e.status IN ('DRAFT', 'RETURNED_FOR_CORRECTION')
     )
-    AND (LOWER(mimetype) IN ('image/jpeg', 'image/png', 'application/pdf'))
+    AND (LOWER(metadata->>'mimetype') IN ('image/jpeg', 'image/png', 'application/pdf'))
 );
 
 -- Note: We do not add an UPDATE policy, because users should DELETE and INSERT 
