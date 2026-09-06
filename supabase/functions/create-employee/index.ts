@@ -135,6 +135,9 @@ Deno.serve(async (req: Request) => {
         .insert({
           user_id: newUserId,
           employee_code,
+          first_name,
+          last_name,
+          company_email: email,
           department_id,
           designation_id,
           joining_date,
