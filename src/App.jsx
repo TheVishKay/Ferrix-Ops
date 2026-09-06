@@ -17,14 +17,12 @@ import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
-import LeaveManagement from "./pages/LeaveManagement";
 import BillsExpenses from "./pages/BillsExpenses";
-import Tasks from "./pages/Tasks";
 import Reports from "./pages/Reports";
-import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
 import { ROLES } from "./constants/roles";
@@ -64,16 +62,6 @@ const routes = [
     },
   },
   {
-    path: "/leave-management",
-    element: <LeaveManagement />,
-    header: {
-      title: "Leave Management",
-      subtitle: "Review and approve leave requests",
-      icon: CalendarDays,
-      tone: "amber",
-    },
-  },
-  {
     path: "/bills",
     element: <BillsExpenses />,
     header: {
@@ -81,16 +69,6 @@ const routes = [
       subtitle: "Manage and approve employee expense claims",
       icon: WalletCards,
       tone: "coral",
-    },
-  },
-  {
-    path: "/tasks",
-    element: <Tasks />,
-    header: {
-      title: "Tasks",
-      subtitle: "Track operational tasks and assignments",
-      icon: CheckSquare,
-      tone: "violet",
     },
   },
   {
@@ -105,16 +83,6 @@ const routes = [
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   {
-    path: "/notifications",
-    element: <Notifications />,
-    header: {
-      title: "Notifications",
-      subtitle: "Your alerts and activity feed",
-      icon: Bell,
-      tone: "coral",
-    },
-  },
-  {
     path: "/settings",
     element: <Settings />,
     header: {
@@ -122,6 +90,16 @@ const routes = [
       subtitle: "Manage your account and preferences",
       icon: SettingsIcon,
       tone: "violet",
+    },
+  },
+  {
+    path: "/profile",
+    element: <Profile />,
+    header: {
+      title: "My Profile",
+      subtitle: "Manage your personal and organizational info",
+      icon: Users,
+      tone: "lime",
     },
   },
 ];

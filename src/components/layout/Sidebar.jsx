@@ -2,9 +2,6 @@ import { NavLink } from "react-router-dom";
 import { ROLES } from "../../constants/roles";
 import {
   Activity,
-  Bell,
-  CalendarDays,
-  CheckSquare,
   Clock3,
   LayoutDashboard,
   LogOut,
@@ -17,7 +14,6 @@ import {
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { notifications } from "@/data/mockData";
 import { useAuth } from "../../contexts/AuthContext";
 
 const navItems = [
@@ -29,15 +25,10 @@ const navItems = [
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   { label: "Attendance", icon: Clock3, to: "/attendance" },
-  { label: "Leave Management", icon: CalendarDays, to: "/leave-management" },
   { label: "Bills & Expenses", icon: WalletCards, to: "/bills" },
-  { label: "Tasks", icon: CheckSquare, to: "/tasks" },
   { label: "Reports", icon: Activity, to: "/reports", allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS] },
-  { label: "Notifications", icon: Bell, to: "/notifications" },
   { label: "Settings", icon: Settings, to: "/settings" },
 ];
-
-const unreadCount = notifications.filter((n) => !n.read).length;
 
 export default function Sidebar({ mobileOpen, onClose }) {
   const { profile, signOut } = useAuth();
@@ -126,9 +117,6 @@ export default function Sidebar({ mobileOpen, onClose }) {
                   <>
                     <Icon className="size-[17px] shrink-0" />
                     <span className="truncate">{item.label}</span>
-                    {item.label === "Notifications" && unreadCount > 0 && (
-                      <span className="ml-auto hr-nav-count">{unreadCount}</span>
-                    )}
                     {isActive && item.to !== "/" && <span className="sr-only">(current page)</span>}
                   </>
                 )}

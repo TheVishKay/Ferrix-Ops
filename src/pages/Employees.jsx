@@ -15,6 +15,11 @@ import {
 
 import { EmptyState } from "@/components/shared";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { EmployeeFormDialog } from "@/components/employees/EmployeeFormDialog";
+import { EmployeeActionsMenu } from "@/components/employees/EmployeeActionsMenu";
+import { DepartmentManagementDialog } from "@/components/employees/DepartmentManagementDialog";
+import { DesignationManagementDialog } from "@/components/employees/DesignationManagementDialog";
 
 const toneClass = (t) => `hr-tone-${t}`;
 
@@ -38,8 +43,11 @@ export default function Employees() {
 
   const [employeesData, setEmployeesData] = useState([]);
   const [departmentsData, setDepartmentsData] = useState([]);
+  const [designationsData, setDesignationsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const { profile } = useAuth();
 
   useEffect(() => {
     let mounted = true;
@@ -49,31 +57,36 @@ export default function Employees() {
         setLoading(true);
         setError(null);
 
-        const [deptRes, empRes] = await Promise.all([
-          supabase.from("departments").select("id, name").order("name"),
+        const [deptRes, desigRes, empRes] = await Promise.all([
+          supabase.from("departments").select("id, name, is_active").order("name"),
+          supabase.from("designations").select("id, name, is_active").order("name"),
           supabase
             .from("employees")
             .select(
               `
             id,
+            user_id,
             employee_code,
             first_name,
             last_name,
             company_email,
             joining_date,
             employment_status,
-            departments ( name ),
-            designations ( name )
+            profiles ( role ),
+            departments ( id, name ),
+            designations ( id, name )
           `,
             )
             .order("created_at", { ascending: false }),
         ]);
 
         if (deptRes.error) throw new Error("Failed to fetch departments.");
+        if (desigRes.error) throw new Error("Failed to fetch designations.");
         if (empRes.error) throw new Error("Failed to fetch employees.");
 
         if (mounted) {
           setDepartmentsData(deptRes.data || []);
+          setDesignationsData(desigRes.data || []);
           setEmployeesData(empRes.data || []);
         }
       } catch (err) {
@@ -98,6 +111,7 @@ export default function Employees() {
       const initials = `${emp.first_name[0] || ""}${emp.last_name[0] || ""}`.toUpperCase();
       const departmentName = emp.departments?.name || "Unknown";
       const designationName = emp.designations?.name || "Unknown";
+      const role = emp.profiles?.role || "UNKNOWN";
 
       return {
         ...emp,
@@ -105,6 +119,7 @@ export default function Employees() {
         initials,
         departmentName,
         designationName,
+        role,
         tone: getTone(emp.employee_code),
       };
     });
@@ -197,9 +212,23 @@ export default function Employees() {
                 <SelectItem value="EXITED">Exited</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="default" size="sm" className="gap-1.5" disabled>
-              <UserPlus className="size-3.5" /> Add Employee
-            </Button>
+            {profile?.role === "OWNER" && (
+              <>
+                <DepartmentManagementDialog
+                  departments={departmentsData}
+                  onUpdated={() => window.location.reload()}
+                />
+                <DesignationManagementDialog
+                  designations={designationsData}
+                  onUpdated={() => window.location.reload()}
+                />
+                <EmployeeFormDialog
+                  departments={departmentsData}
+                  designations={designationsData}
+                  onSaved={() => window.location.reload()}
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -265,15 +294,24 @@ export default function Employees() {
                         </Badge>
                       </td>
                       <td>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="min-h-9 min-w-9"
-                          aria-label={`Options for ${emp.name}`}
-                          disabled
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
+                        {profile?.role === "OWNER" ? (
+                          <EmployeeActionsMenu
+                            employee={emp}
+                            departments={departmentsData}
+                            designations={designationsData}
+                            onUpdated={() => window.location.reload()}
+                          />
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="min-h-9 min-w-9"
+                            aria-label={`Options for ${emp.name}`}
+                            disabled
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}
