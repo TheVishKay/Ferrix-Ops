@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Activity,
   ArrowUpRight,
   CalendarDays,
   Check,
@@ -14,6 +13,7 @@ import {
   UserPlus,
   Users,
   WalletCards,
+  Receipt,
   X,
 } from "lucide-react";
 import {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Lock, Moon, Palette, Save, Shield, Sun, User } from "lucide-react";
+import { Lock, Save } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export default function Settings() {
   const [name, setName] = useState("Admin");
   const [email, setEmail] = useState("admin@meridianworks.in");
   const [phone, setPhone] = useState("+91 98765 00001");
-  const [role, setRole] = useState("HR Administrator");
+  const [role] = useState("HR Administrator");
 
   // Notifications state
   const [emailNotifs, setEmailNotifs] = useState(true);
