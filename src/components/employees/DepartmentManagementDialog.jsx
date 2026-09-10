@@ -11,11 +11,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { employeeService } from "@/services/employeeService";
+import { useToast } from "@/components/ui/use-toast";
 
 export function DepartmentManagementDialog({ departments, onUpdated }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { toast } = useToast();
 
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -29,9 +31,15 @@ export function DepartmentManagementDialog({ departments, onUpdated }) {
     try {
       await employeeService.createDepartment({ name: newName.trim(), is_active: true });
       setNewName("");
+      toast({ title: "Success", description: "Department created successfully." });
       onUpdated();
     } catch (err) {
       setError(err.message || "Failed to create department");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create department",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -43,9 +51,15 @@ export function DepartmentManagementDialog({ departments, onUpdated }) {
     try {
       await employeeService.updateDepartment(id, data);
       setEditingId(null);
+      toast({ title: "Success", description: "Department updated successfully." });
       onUpdated();
     } catch (err) {
       setError(err.message || "Failed to update department");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update department",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

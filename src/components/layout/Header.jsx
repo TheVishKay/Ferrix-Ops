@@ -4,10 +4,7 @@ import { Bell, Menu, Search, Settings } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { notifications } from "@/data/mockData";
 import { useAuth } from "../../contexts/AuthContext";
-
-const unreadCount = notifications.filter((n) => !n.read).length;
 
 export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone = "coral" }) {
   const navigate = useNavigate();
@@ -65,19 +62,6 @@ export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone =
               className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             />
           </label>
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="relative min-h-11 min-w-11"
-            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-            onClick={() => navigate("/notifications")}
-          >
-            <Bell className="size-4" />
-            {unreadCount > 0 && (
-              <span className="hr-notification-dot" aria-label="Unread notifications" />
-            )}
-          </Button>
 
           <Button
             variant="outline"

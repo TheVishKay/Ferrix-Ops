@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLES } from "@/constants/roles";
+import { useToast } from "@/components/ui/use-toast";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = false }) {
   const { user, profile } = useAuth();
@@ -12,6 +14,8 @@ export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = 
   const [error, setError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const { toast } = useToast();
+  const [confirmState, setConfirmState] = useState({ isOpen: false, payload: null });
 
   const fetchDocuments = useCallback(async () => {
     if (!expenseId) return;
@@ -79,20 +83,26 @@ export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = 
       }
 
       await fetchDocuments();
+      toast({ title: "Success", description: "Document uploaded successfully." });
     } catch (err) {
       console.error("Upload error:", err);
-      setError(err.message || "Failed to upload document.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to upload document.",
+        variant: "error",
+      });
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = async (doc) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
+  const confirmDelete = (doc) => {
+    setConfirmState({ isOpen: true, payload: doc });
+  };
 
+  const executeDelete = async (doc) => {
     try {
       setDeletingId(doc.id);
-      setError(null);
 
       // 1. Delete metadata from public.expense_documents
       const { error: dbError } = await supabase.from("expense_documents").delete().eq("id", doc.id);
@@ -111,17 +121,27 @@ export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = 
         .remove([doc.storage_path]);
 
       if (storageError) {
-        // Storage deletion failed, but metadata is already deleted.
-        // Do NOT recreate the metadata row. Report the cleanup failure.
         console.warn("Storage cleanup failed:", storageError);
-        setError("Document metadata removed, but Storage cleanup failed.");
+        toast({
+          title: "Warning",
+          description: "Document metadata removed, but Storage cleanup failed.",
+          variant: "error",
+        });
+        setConfirmState({ isOpen: false, payload: null });
         return;
       }
+
+      toast({ title: "Success", description: "Document deleted successfully." });
+      setConfirmState({ isOpen: false, payload: null });
     } catch (err) {
       console.error("Delete error:", err);
-      setError(err.message || "Failed to delete document.");
-      // Refresh to ensure UI matches DB state
+      toast({
+        title: "Error",
+        description: err.message || "Failed to delete document.",
+        variant: "error",
+      });
       await fetchDocuments();
+      setConfirmState({ isOpen: false, payload: null });
     } finally {
       setDeletingId(null);
     }
@@ -249,7 +269,7 @@ export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = 
                       variant="ghost"
                       size="icon"
                       className="size-8 text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDelete(doc)}
+                      onClick={() => confirmDelete(doc)}
                       disabled={deletingId === doc.id}
                       title="Delete"
                     >
@@ -266,6 +286,18 @@ export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = 
           })}
         </ul>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !deletingId) setConfirmState({ isOpen: false, payload: null });
+        }}
+        title="Delete Document"
+        description="Are you sure you want to delete this document?"
+        confirmText="Delete"
+        onConfirm={() => executeDelete(confirmState.payload)}
+        loading={!!deletingId}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import AppLayout from "./components/layout/AppLayout";
+import { Toaster } from "./components/ui/toaster";
 
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
@@ -106,37 +107,40 @@ const routes = [
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route element={<ProtectedRoute />}>
-        {routes.map(({ path, element, header, allowedRoles }) => {
-          const routeElement = allowedRoles ? (
-            <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>
-          ) : (
-            element
-          );
+    <>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route element={<ProtectedRoute />}>
+          {routes.map(({ path, element, header, allowedRoles }) => {
+            const routeElement = allowedRoles ? (
+              <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>
+            ) : (
+              element
+            );
 
-          return (
-            <Route key={path} element={<AppLayout headerProps={header} />}>
-              <Route path={path} element={routeElement} />
-            </Route>
-          );
-        })}
-        {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
-        <Route
-          element={
-            <AppLayout
-              headerProps={{
-                title: "Page Not Found",
-                subtitle: "This page does not exist",
-                tone: "coral",
-              }}
-            />
-          }
-        >
-          <Route path="*" element={<NotFound />} />
+            return (
+              <Route key={path} element={<AppLayout headerProps={header} />}>
+                <Route path={path} element={routeElement} />
+              </Route>
+            );
+          })}
+          {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
+          <Route
+            element={
+              <AppLayout
+                headerProps={{
+                  title: "Page Not Found",
+                  subtitle: "This page does not exist",
+                  tone: "coral",
+                }}
+              />
+            }
+          >
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+      <Toaster />
+    </>
   );
 }

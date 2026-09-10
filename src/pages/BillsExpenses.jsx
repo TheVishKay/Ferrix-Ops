@@ -41,6 +41,8 @@ import { EmptyState } from "@/components/shared";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLES } from "@/constants/roles";
+import { useToast } from "@/components/ui/use-toast";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 import ExpenseFormDialog from "@/components/expenses/ExpenseFormDialog";
 import ExpenseDetailsDialog from "@/components/expenses/ExpenseDetailsDialog";
@@ -91,6 +93,7 @@ export default function BillsExpenses() {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   // Dialog States
@@ -108,10 +111,16 @@ export default function BillsExpenses() {
 
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [confirmState, setConfirmState] = useState({ isOpen: false, type: null, payload: null });
+  const { toast } = useToast();
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchExpenses = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
       const [catRes, expRes] = await Promise.all([
@@ -143,6 +152,7 @@ export default function BillsExpenses() {
       setError(err.message || "Failed to load expenses.");
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -255,49 +265,74 @@ export default function BillsExpenses() {
         setSelectedExpense(newExpense);
       }
       await fetchExpenses();
+      toast({
+        title: "Success",
+        description: selectedExpense
+          ? "Expense updated successfully."
+          : "Expense created successfully.",
+        variant: "default",
+      });
     } catch (err) {
       console.error(err);
-      setActionError(err.message || "Failed to save expense.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to save expense.",
+        variant: "error",
+      });
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleSubmitExpense = async (expense) => {
-    if (
-      !confirm(
-        "Are you sure you want to submit this expense? No further edits will be possible unless it is returned for correction.",
-      )
-    )
-      return;
+  const confirmSubmitExpense = (expense) => {
+    setConfirmState({ isOpen: true, type: "SUBMIT", payload: expense });
+  };
+
+  const executeSubmitExpense = async (expense) => {
+    setActionLoading(true);
     try {
       const { error: rpcErr } = await supabase.rpc("submit_expense", {
         p_expense_id: expense.id,
       });
       if (rpcErr) throw rpcErr;
-      await fetchExpenses();
+      await fetchExpenses(true);
+      toast({ title: "Success", description: "Expense submitted successfully." });
+      setConfirmState({ isOpen: false, type: null, payload: null });
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to submit expense.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to submit expense.",
+        variant: "error",
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleDeleteExpense = async (expense) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this draft expense? All associated documents will also be deleted.",
-      )
-    )
-      return;
+  const confirmDeleteExpense = (expense) => {
+    setConfirmState({ isOpen: true, type: "DELETE", payload: expense });
+  };
+
+  const executeDeleteExpense = async (expense) => {
+    setActionLoading(true);
     try {
       const { error: rpcErr } = await supabase.rpc("delete_draft_expense", {
         p_expense_id: expense.id,
       });
       if (rpcErr) throw rpcErr;
-      await fetchExpenses();
+      await fetchExpenses(true);
+      toast({ title: "Success", description: "Expense deleted successfully." });
+      setConfirmState({ isOpen: false, type: null, payload: null });
     } catch (err) {
       console.error(err);
-      alert(err.message || "Failed to delete expense.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to delete expense.",
+        variant: "error",
+      });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -322,10 +357,15 @@ export default function BillsExpenses() {
       }
       setReviewOpen(false);
       setReviewExpense(null);
-      await fetchExpenses();
+      await fetchExpenses(true);
+      toast({ title: "Success", description: "Expense review processed successfully." });
     } catch (err) {
       console.error(err);
-      setActionError(err.message || "Failed to submit review.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to review expense.",
+        variant: "error",
+      });
     } finally {
       setActionLoading(false);
     }
@@ -342,10 +382,15 @@ export default function BillsExpenses() {
       if (rpcErr) throw rpcErr;
       setPaymentOpen(false);
       setPaymentExpense(null);
-      await fetchExpenses();
+      await fetchExpenses(true);
+      toast({ title: "Success", description: "Payment recorded successfully." });
     } catch (err) {
       console.error(err);
-      setActionError(err.message || "Failed to record payment.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to record payment.",
+        variant: "error",
+      });
     } finally {
       setActionLoading(false);
     }
@@ -439,11 +484,11 @@ export default function BillsExpenses() {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchExpenses}
-              disabled={loading}
+              onClick={() => fetchExpenses(true)}
+              disabled={loading || isRefreshing}
               title="Refresh"
             >
-              <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
             {profile?.role === ROLES.EMPLOYEE && (
               <Button
@@ -497,151 +542,172 @@ export default function BillsExpenses() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="hr-table min-w-[860px]">
-            <thead>
-              <tr>
-                <th>Submitted By</th>
-                <th>Expense ID</th>
-                <th>Vendor</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((exp) => (
-                <tr key={exp.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="size-9 rounded-xl">
-                        <AvatarFallback className={`hr-avatar ${toneClass(exp.submittedByTone)}`}>
-                          {exp.submittedByInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium text-foreground">{exp.submittedBy}</span>
-                    </div>
-                  </td>
-                  <td className="font-mono text-xs text-muted-foreground">{exp.expense_number}</td>
-                  <td className="text-xs">{exp.vendor_name}</td>
-                  <td>{exp.categoryName}</td>
-                  <td className="font-display font-bold text-foreground">{fmt(exp.amount)}</td>
-                  <td className="text-xs">{dt(exp.expense_date)}</td>
-                  <td>
-                    <Badge
-                      className={`hr-status-badge hr-tone-${statusToneMap[exp.status] ?? "cyan"}`}
-                    >
-                      <span className="hr-mini-dot" /> {statusLabel[exp.status] ?? exp.status}
-                    </Badge>
-                  </td>
-                  <td>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="min-h-9 min-w-9"
-                          aria-label="More options"
+        <div className="overflow-x-auto min-h-[300px] relative">
+          {loading ? (
+            <div className="flex h-64 flex-col items-center justify-center space-y-4">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">Loading expenses...</p>
+            </div>
+          ) : (
+            <div
+              className={
+                isRefreshing
+                  ? "opacity-60 pointer-events-none transition-opacity duration-200"
+                  : "transition-opacity duration-200"
+              }
+            >
+              {isRefreshing && (
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-md bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm border border-border">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Refreshing...
+                </div>
+              )}
+              <table className="hr-table min-w-[860px]">
+                <thead>
+                  <tr>
+                    <th>Submitted By</th>
+                    <th>Expense ID</th>
+                    <th>Vendor</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((exp) => (
+                    <tr key={exp.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-9 rounded-xl">
+                            <AvatarFallback
+                              className={`hr-avatar ${toneClass(exp.submittedByTone)}`}
+                            >
+                              {exp.submittedByInitials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-foreground">{exp.submittedBy}</span>
+                        </div>
+                      </td>
+                      <td className="font-mono text-xs text-muted-foreground">
+                        {exp.expense_number}
+                      </td>
+                      <td className="text-xs">{exp.vendor_name}</td>
+                      <td>{exp.categoryName}</td>
+                      <td className="font-display font-bold text-foreground">{fmt(exp.amount)}</td>
+                      <td className="text-xs">{dt(exp.expense_date)}</td>
+                      <td>
+                        <Badge
+                          className={`hr-status-badge hr-tone-${statusToneMap[exp.status] ?? "cyan"}`}
                         >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setDetailsExpense(exp);
-                            setDetailsOpen(true);
-                          }}
-                        >
-                          View Details
-                        </DropdownMenuItem>
-
-                        {/* Employee Actions */}
-                        {exp.isOwn &&
-                          (exp.status === "DRAFT" || exp.status === "RETURNED_FOR_CORRECTION") && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(exp);
-                                  setActionError(null);
-                                  setFormOpen(true);
-                                }}
-                              >
-                                Edit Expense
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSubmitExpense(exp)}>
-                                Submit
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        {exp.isOwn && exp.status === "DRAFT" && (
-                          <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => handleDeleteExpense(exp)}
-                          >
-                            Delete Draft
-                          </DropdownMenuItem>
-                        )}
-
-                        {/* Accounts Actions */}
-                        {profile?.role === ROLES.ACCOUNTS && exp.status === "SUBMITTED" && (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setReviewExpense(exp);
-                              setActionError(null);
-                              setReviewOpen(true);
-                            }}
-                          >
-                            Review (Accounts)
-                          </DropdownMenuItem>
-                        )}
-                        {profile?.role === ROLES.ACCOUNTS && exp.status === "PAYMENT_PENDING" && (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setPaymentExpense(exp);
-                              setActionError(null);
-                              setPaymentOpen(true);
-                            }}
-                          >
-                            Record Payment
-                          </DropdownMenuItem>
-                        )}
-
-                        {/* Owner Actions */}
-                        {profile?.role === ROLES.OWNER &&
-                          exp.status === "PENDING_OWNER_APPROVAL" && (
+                          <span className="hr-mini-dot" /> {statusLabel[exp.status] ?? exp.status}
+                        </Badge>
+                      </td>
+                      <td>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="min-h-9 min-w-9"
+                              aria-label="More options"
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onClick={() => {
-                                setReviewExpense(exp);
-                                setActionError(null);
-                                setReviewOpen(true);
+                                setDetailsExpense(exp);
+                                setDetailsOpen(true);
                               }}
                             >
-                              Review (Owner)
+                              View Details
                             </DropdownMenuItem>
-                          )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+                            {/* Employee Actions */}
+                            {exp.isOwn &&
+                              (exp.status === "DRAFT" ||
+                                exp.status === "RETURNED_FOR_CORRECTION") && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(exp);
+                                      setFormOpen(true);
+                                    }}
+                                  >
+                                    {exp.status === "DRAFT" ? "Edit Draft" : "Edit Expense"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => confirmSubmitExpense(exp)}>
+                                    {exp.status === "DRAFT" ? "Submit" : "Resubmit"}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            {exp.isOwn && exp.status === "DRAFT" && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => confirmDeleteExpense(exp)}
+                              >
+                                Delete Draft
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Accounts Actions */}
+                            {profile?.role === ROLES.ACCOUNTS && exp.status === "SUBMITTED" && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setReviewExpense(exp);
+                                  setActionError(null);
+                                  setReviewOpen(true);
+                                }}
+                              >
+                                Review (Accounts)
+                              </DropdownMenuItem>
+                            )}
+                            {profile?.role === ROLES.ACCOUNTS &&
+                              exp.status === "PAYMENT_PENDING" && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setPaymentExpense(exp);
+                                    setActionError(null);
+                                    setPaymentOpen(true);
+                                  }}
+                                >
+                                  Record Payment
+                                </DropdownMenuItem>
+                              )}
+
+                            {/* Owner Actions */}
+                            {profile?.role === ROLES.OWNER &&
+                              exp.status === "PENDING_OWNER_APPROVAL" && (
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setReviewExpense(exp);
+                                    setActionError(null);
+                                    setReviewOpen(true);
+                                  }}
+                                >
+                                  Review (Owner)
+                                </DropdownMenuItem>
+                              )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {filtered.length === 0 && !loading && (
             <EmptyState
               icon={WalletCards}
               title="No expenses found"
               subtitle="Adjust your filters or create a new expense."
             />
-          )}
-          {loading && filtered.length === 0 && (
-            <div className="flex justify-center p-8">
-              <Loader2 className="size-6 animate-spin text-muted-foreground" />
-            </div>
           )}
         </div>
       </section>
@@ -682,6 +748,26 @@ export default function BillsExpenses() {
         onSubmit={handleRecordPayment}
         loading={actionLoading}
         error={actionError}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !actionLoading)
+            setConfirmState({ isOpen: false, type: null, payload: null });
+        }}
+        title={confirmState.type === "SUBMIT" ? "Submit Expense" : "Delete Draft"}
+        description={
+          confirmState.type === "SUBMIT"
+            ? "Are you sure you want to submit this expense? No further edits will be possible unless it is returned for correction."
+            : "Are you sure you want to delete this draft expense? All associated documents will also be deleted."
+        }
+        confirmText={confirmState.type === "SUBMIT" ? "Submit" : "Delete"}
+        onConfirm={() => {
+          if (confirmState.type === "SUBMIT") executeSubmitExpense(confirmState.payload);
+          else if (confirmState.type === "DELETE") executeDeleteExpense(confirmState.payload);
+        }}
+        loading={actionLoading}
       />
     </main>
   );

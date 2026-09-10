@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { MoreHorizontal, Search, UserPlus, Users, Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -45,25 +45,27 @@ export default function Employees() {
   const [departmentsData, setDepartmentsData] = useState([]);
   const [designationsData, setDesignationsData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const { profile } = useAuth();
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchData() {
-      try {
+  const fetchData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
         setLoading(true);
-        setError(null);
+      }
+      setError(null);
 
-        const [deptRes, desigRes, empRes] = await Promise.all([
-          supabase.from("departments").select("id, name, is_active").order("name"),
-          supabase.from("designations").select("id, name, is_active").order("name"),
-          supabase
-            .from("employees")
-            .select(
-              `
+      const [deptRes, desigRes, empRes] = await Promise.all([
+        supabase.from("departments").select("id, name, is_active").order("name"),
+        supabase.from("designations").select("id, name, is_active").order("name"),
+        supabase
+          .from("employees")
+          .select(
+            `
             id,
             user_id,
             employee_code,
@@ -76,34 +78,28 @@ export default function Employees() {
             departments ( id, name ),
             designations ( id, name )
           `,
-            )
-            .order("created_at", { ascending: false }),
-        ]);
+          )
+          .order("created_at", { ascending: false }),
+      ]);
 
-        if (deptRes.error) throw new Error("Failed to fetch departments.");
-        if (desigRes.error) throw new Error("Failed to fetch designations.");
-        if (empRes.error) throw new Error("Failed to fetch employees.");
+      if (deptRes.error) throw new Error("Failed to fetch departments.");
+      if (desigRes.error) throw new Error("Failed to fetch designations.");
+      if (empRes.error) throw new Error("Failed to fetch employees.");
 
-        if (mounted) {
-          setDepartmentsData(deptRes.data || []);
-          setDesignationsData(desigRes.data || []);
-          setEmployeesData(empRes.data || []);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err.message || "An unexpected error occurred while fetching data.");
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
+      setDepartmentsData(deptRes.data || []);
+      setDesignationsData(desigRes.data || []);
+      setEmployeesData(empRes.data || []);
+    } catch (err) {
+      setError(err.message || "An unexpected error occurred while fetching data.");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
     }
-
-    fetchData();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const mappedEmployees = useMemo(() => {
     return employeesData.map((emp) => {
@@ -216,23 +212,23 @@ export default function Employees() {
               <>
                 <DepartmentManagementDialog
                   departments={departmentsData}
-                  onUpdated={() => window.location.reload()}
+                  onUpdated={() => fetchData(true)}
                 />
                 <DesignationManagementDialog
                   designations={designationsData}
-                  onUpdated={() => window.location.reload()}
+                  onUpdated={() => fetchData(true)}
                 />
                 <EmployeeFormDialog
                   departments={departmentsData}
                   designations={designationsData}
-                  onSaved={() => window.location.reload()}
+                  onSaved={() => fetchData(true)}
                 />
               </>
             )}
           </div>
         </div>
 
-        <div className="overflow-x-auto min-h-[300px]">
+        <div className="overflow-x-auto min-h-[300px] relative">
           {loading ? (
             <div className="flex h-64 flex-col items-center justify-center space-y-4">
               <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -240,7 +236,7 @@ export default function Employees() {
                 Loading employee directory...
               </p>
             </div>
-          ) : error ? (
+          ) : error && employeesData.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center space-y-2 text-center px-4">
               <div className="hr-icon-box hr-tone-coral mb-2 size-12">
                 <Users className="size-5" />
@@ -249,7 +245,19 @@ export default function Employees() {
               <p className="text-xs text-muted-foreground">{error}</p>
             </div>
           ) : (
-            <>
+            <div
+              className={
+                isRefreshing
+                  ? "opacity-60 pointer-events-none transition-opacity duration-200"
+                  : "transition-opacity duration-200"
+              }
+            >
+              {isRefreshing && (
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-md bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm border border-border">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Refreshing...
+                </div>
+              )}
               <table className="hr-table min-w-[820px]">
                 <thead>
                   <tr>
@@ -299,7 +307,7 @@ export default function Employees() {
                             employee={emp}
                             departments={departmentsData}
                             designations={designationsData}
-                            onUpdated={() => window.location.reload()}
+                            onUpdated={() => fetchData(true)}
                           />
                         ) : (
                           <Button
@@ -324,7 +332,7 @@ export default function Employees() {
                   subtitle="Try adjusting your search or filters."
                 />
               )}
-            </>
+            </div>
           )}
         </div>
       </section>

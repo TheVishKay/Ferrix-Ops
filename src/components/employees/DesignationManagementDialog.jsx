@@ -11,11 +11,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { employeeService } from "@/services/employeeService";
+import { useToast } from "@/components/ui/use-toast";
 
 export function DesignationManagementDialog({ designations, onUpdated }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { toast } = useToast();
 
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState(null);
@@ -29,9 +31,15 @@ export function DesignationManagementDialog({ designations, onUpdated }) {
     try {
       await employeeService.createDesignation({ name: newName.trim(), is_active: true });
       setNewName("");
+      toast({ title: "Success", description: "Designation created successfully." });
       onUpdated();
     } catch (err) {
       setError(err.message || "Failed to create designation");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create designation",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -43,9 +51,15 @@ export function DesignationManagementDialog({ designations, onUpdated }) {
     try {
       await employeeService.updateDesignation(id, data);
       setEditingId(null);
+      toast({ title: "Success", description: "Designation updated successfully." });
       onUpdated();
     } catch (err) {
       setError(err.message || "Failed to update designation");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update designation",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

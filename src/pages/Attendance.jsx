@@ -29,6 +29,7 @@ import { EmptyState } from "@/components/shared";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLES } from "@/constants/roles";
+import { useToast } from "@/components/ui/use-toast";
 import AttendanceCorrectionModal from "@/components/attendance/AttendanceCorrectionModal";
 
 // =============================================================================
@@ -71,6 +72,11 @@ const timeFormatter = new Intl.DateTimeFormat("en-US", {
 
 const formatDT = (iso) => (iso ? timeFormatter.format(new Date(iso)) : "—");
 const formatDate = (d) => d || "—";
+
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 // =============================================================================
 // CorrectionReviewCard — OWNER review queue card (local component)
@@ -234,12 +240,14 @@ export default function Attendance() {
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [filterDate, setFilterDate] = useState(getTodayStr());
 
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [employeeRecord, setEmployeeRecord] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -264,6 +272,8 @@ export default function Attendance() {
   const [correctionSubmitting, setCorrectionSubmitting] = useState(false);
   const [correctionError, setCorrectionError] = useState(null);
 
+  const { toast } = useToast();
+
   // OWNER review state
   const [reviewLoadingId, setReviewLoadingId] = useState(null);
   // Per-request remarks: { [requestId]: string }
@@ -274,17 +284,26 @@ export default function Attendance() {
   // into fetchCorrectionData without relying on potentially stale state.
   // ---------------------------------------------------------------------------
 
-  const fetchAttendance = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchAttendance = useCallback(
+    async (isRefresh = false, activeDate = filterDate) => {
+      try {
+        if (isRefresh) {
+          setIsRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+        setError(null);
 
-      const [deptRes, attRes] = await Promise.all([
-        supabase.from("departments").select("name").order("name"),
-        supabase
-          .from("attendance_records")
-          .select(
-            `
+        const currentToday = getTodayStr();
+        const datesToFetch =
+          activeDate === currentToday ? [activeDate] : [activeDate, currentToday];
+
+        const [deptRes, attRes] = await Promise.all([
+          supabase.from("departments").select("name").order("name"),
+          supabase
+            .from("attendance_records")
+            .select(
+              `
             id,
             attendance_date,
             check_in_at,
@@ -298,40 +317,44 @@ export default function Attendance() {
               departments ( name )
             )
           `,
-          )
-          .order("attendance_date", { ascending: false })
-          .order("created_at", { ascending: false }),
-      ]);
+            )
+            .in("attendance_date", datesToFetch)
+            .order("attendance_date", { ascending: false })
+            .order("created_at", { ascending: false }),
+        ]);
 
-      if (deptRes.error) throw new Error("Failed to load departments");
-      if (attRes.error) throw new Error("Failed to load attendance records");
+        if (deptRes.error) throw new Error("Failed to load departments");
+        if (attRes.error) throw new Error("Failed to load attendance records");
 
-      setDepartments(deptRes.data.map((d) => d.name));
-      setAttendanceRecords(attRes.data);
+        setDepartments(deptRes.data.map((d) => d.name));
+        setAttendanceRecords(attRes.data);
 
-      if (user) {
-        const { data: empData, error: empError } = await supabase
-          .from("employees")
-          .select("id, employment_status")
-          .eq("user_id", user.id)
-          .single();
+        if (user) {
+          const { data: empData, error: empError } = await supabase
+            .from("employees")
+            .select("id, employment_status")
+            .eq("user_id", user.id)
+            .single();
 
-        if (!empError && empData && empData.employment_status === "ACTIVE") {
-          setEmployeeRecord(empData);
-        } else {
-          setEmployeeRecord(null);
+          if (!empError && empData && empData.employment_status === "ACTIVE") {
+            setEmployeeRecord(empData);
+          } else {
+            setEmployeeRecord(null);
+          }
         }
-      }
 
-      return attRes.data;
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Failed to load attendance data.");
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+        return attRes.data;
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Failed to load attendance data.");
+        return [];
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [user, filterDate],
+  );
 
   // ---------------------------------------------------------------------------
   // fetchCorrectionData — role-aware, kept separate from attendance fetching.
@@ -396,9 +419,9 @@ export default function Attendance() {
 
           const { data, error: qErr } = await supabase
             .from("attendance_correction_requests")
-            .select("id, attendance_record_id, status")
+            .select("id, attendance_record_id, status, review_remarks, created_at")
             .in("attendance_record_id", recordIds)
-            .eq("status", "PENDING");
+            .order("created_at", { ascending: false });
 
           if (qErr) {
             console.error("Failed to load employee correction data:", qErr);
@@ -407,7 +430,13 @@ export default function Attendance() {
 
           const map = {};
           (data ?? []).forEach((req) => {
-            map[req.attendance_record_id] = { id: req.id, status: req.status };
+            if (!map[req.attendance_record_id]) {
+              map[req.attendance_record_id] = {
+                id: req.id,
+                status: req.status,
+                review_remarks: req.review_remarks,
+              };
+            }
           });
           setCorrectionMap(map);
         }
@@ -418,6 +447,17 @@ export default function Attendance() {
     },
     [user, profile],
   );
+
+  const refreshAll = useCallback(async () => {
+    try {
+      const records = await fetchAttendance(true);
+      if (records) {
+        await fetchCorrectionData(records);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [fetchAttendance, fetchCorrectionData]);
 
   // ---------------------------------------------------------------------------
   // Initial load — depends on both user and profile.role.
@@ -432,12 +472,12 @@ export default function Attendance() {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const records = await fetchAttendance();
+      const records = await fetchAttendance(false, filterDate);
       await fetchCorrectionData(records);
     };
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, profile?.role]);
+  }, [user, profile?.role, filterDate]);
 
   // ---------------------------------------------------------------------------
   // Phase 3A computed values (preserved exactly)
@@ -479,17 +519,15 @@ export default function Attendance() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return mappedRecords.filter((r) => {
+      if (r.attendance_date !== filterDate) return false;
       const matchSearch = !q || `${r.name} ${r.employeeId}`.toLowerCase().includes(q);
       const matchDept = dept === "all" || r.department === dept;
       const matchStatus = statusFilter === "all" || r.status === statusFilter;
       return matchSearch && matchDept && matchStatus;
     });
-  }, [search, dept, statusFilter, mappedRecords]);
+  }, [search, dept, statusFilter, mappedRecords, filterDate]);
 
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
+  const todayStr = useMemo(() => getTodayStr(), []);
 
   const todayRecord = useMemo(() => {
     if (!employeeRecord) return null;
@@ -511,10 +549,16 @@ export default function Attendance() {
       setError(null);
       const { error: rpcError } = await supabase.rpc("check_in");
       if (rpcError) throw rpcError;
-      await fetchAttendance();
+      await refreshAll();
+      toast({ title: "Success", description: "Checked in successfully." });
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to check in.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to check in.",
+        variant: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -526,10 +570,16 @@ export default function Attendance() {
       setError(null);
       const { error: rpcError } = await supabase.rpc("check_out");
       if (rpcError) throw rpcError;
-      await fetchAttendance();
+      await refreshAll();
+      toast({ title: "Success", description: "Checked out successfully." });
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to check out.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to check out.",
+        variant: "error",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -613,7 +663,8 @@ export default function Attendance() {
       // Attendance records are unchanged by the request RPC.
       setCorrectionModalRecord(null);
       setCorrectionError(null);
-      await fetchCorrectionData(attendanceRecords);
+      await refreshAll();
+      toast({ title: "Success", description: "Correction request submitted successfully." });
     } catch (err) {
       console.error(err);
       setCorrectionError(err.message || "Failed to submit correction request.");
@@ -660,31 +711,33 @@ export default function Attendance() {
         return next;
       });
 
-      if (approve) {
-        // Approval modifies the attendance record — refresh attendance + corrections.
-        const records = await fetchAttendance();
-        await fetchCorrectionData(records);
-      } else {
-        // Rejection only changes the correction request status.
-        await fetchCorrectionData(attendanceRecords);
-      }
+      await refreshAll();
+      toast({
+        title: "Success",
+        description: approve
+          ? "Correction approved successfully."
+          : "Correction rejected successfully.",
+      });
     } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to review correction request.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to process review.",
+        variant: "error",
+      });
     } finally {
       setReviewLoadingId(null);
     }
   };
 
   // ---------------------------------------------------------------------------
-  // Summary counts (Phase 3A — preserved exactly)
+  // Summary counts
   // ---------------------------------------------------------------------------
 
-  const todayRecords = attendanceRecords.filter((r) => r.attendance_date === todayStr);
-  const totalToday = todayRecords.length;
-  const presentCount = todayRecords.filter((r) => r.status === "PRESENT").length;
-  const incompleteCount = todayRecords.filter((r) => r.status === "INCOMPLETE").length;
-  const absentLeaveCount = todayRecords.filter(
+  const totalRecords = filtered.length;
+  const presentCount = filtered.filter((r) => r.status === "PRESENT").length;
+  const incompleteCount = filtered.filter((r) => r.status === "INCOMPLETE").length;
+  const absentLeaveCount = filtered.filter(
     (r) => r.status === "ABSENT" || r.status === "LEAVE",
   ).length;
 
@@ -743,12 +796,9 @@ export default function Attendance() {
       {/* ------------------------------------------------------------------- */}
       {/* Summary cards (Phase 3A — unchanged)                                */}
       {/* ------------------------------------------------------------------- */}
-      <section
-        className="grid grid-cols-2 gap-4 md:grid-cols-4"
-        aria-label="Today's attendance summary"
-      >
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Attendance summary">
         {[
-          { label: "Total Today", value: totalToday, tone: "cyan" },
+          { label: "Total", value: totalRecords, tone: "cyan" },
           { label: "Present", value: presentCount, tone: "lime" },
           { label: "Incomplete", value: incompleteCount, tone: "amber" },
           { label: "Absent / Leave", value: absentLeaveCount, tone: "coral" },
@@ -860,13 +910,18 @@ export default function Attendance() {
                 <SelectItem value="LEAVE">On Leave</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" className="gap-1.5" disabled={loading}>
-              <CalendarDays className="size-3.5" /> Filter Date
-            </Button>
+            <Input
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="h-9 w-[135px] text-xs"
+              disabled={loading}
+              aria-label="Filter Date"
+            />
           </div>
         </div>
 
-        <div className="overflow-x-auto min-h-[300px]">
+        <div className="overflow-x-auto min-h-[300px] relative">
           {loading ? (
             <div className="flex h-64 flex-col items-center justify-center space-y-4">
               <Loader2 className="size-8 animate-spin text-muted-foreground" />
@@ -875,7 +930,19 @@ export default function Attendance() {
               </p>
             </div>
           ) : (
-            <>
+            <div
+              className={
+                isRefreshing
+                  ? "opacity-60 pointer-events-none transition-opacity duration-200"
+                  : "transition-opacity duration-200"
+              }
+            >
+              {isRefreshing && (
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-md bg-background/90 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm border border-border">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Refreshing...
+                </div>
+              )}
               <table className="hr-table min-w-[900px]">
                 <thead>
                   <tr>
@@ -897,8 +964,9 @@ export default function Attendance() {
                     // Is this row the current user's own attendance record?
                     const isOwnRow = !!employeeRecord && row.employees?.id === employeeRecord.id;
 
-                    // Is there a PENDING correction for this record?
-                    const hasPending = !!correctionMap[row.id];
+                    // What is the latest correction request for this record?
+                    const latestCorrection = correctionMap[row.id];
+                    const hasPending = latestCorrection?.status === "PENDING";
 
                     return (
                       <tr key={row.id}>
@@ -933,11 +1001,8 @@ export default function Attendance() {
                         {employeeRecord && (
                           <td>
                             {isOwnRow && (
-                              <>
-                                {hasPending ? (
-                                  // PENDING: show indicator, prevent duplicate request.
-                                  // Database unique partial index remains authoritative
-                                  // for race conditions even when this shows.
+                              <div className="flex flex-col items-start gap-2">
+                                {latestCorrection?.status === "PENDING" && (
                                   <button
                                     className="hr-correction-action-btn hr-correction-action-btn--pending"
                                     disabled
@@ -946,11 +1011,33 @@ export default function Attendance() {
                                     <Clock className="size-3" />
                                     Pending
                                   </button>
-                                ) : (
-                                  // No pending request: allow correction.
-                                  // Race condition still possible (two tabs).
-                                  // handleSubmitCorrection translates the DB
-                                  // unique constraint error gracefully.
+                                )}
+
+                                {latestCorrection?.status === "APPROVED" && (
+                                  <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="size-3.5" />
+                                    Approved
+                                  </div>
+                                )}
+
+                                {latestCorrection?.status === "REJECTED" && (
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-destructive">
+                                      <XCircle className="size-3.5" />
+                                      Rejected
+                                    </div>
+                                    {latestCorrection.review_remarks && (
+                                      <p
+                                        className="text-[10px] text-muted-foreground leading-tight max-w-[140px] line-clamp-2"
+                                        title={latestCorrection.review_remarks}
+                                      >
+                                        Reason: {latestCorrection.review_remarks}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {!hasPending && (
                                   <button
                                     className="hr-correction-action-btn hr-correction-action-btn--correct"
                                     onClick={() => handleOpenCorrectionModal(row)}
@@ -961,7 +1048,7 @@ export default function Attendance() {
                                     Correct
                                   </button>
                                 )}
-                              </>
+                              </div>
                             )}
                           </td>
                         )}
@@ -977,7 +1064,7 @@ export default function Attendance() {
                   subtitle="No attendance records available for the current filters."
                 />
               )}
-            </>
+            </div>
           )}
         </div>
       </section>

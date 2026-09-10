@@ -26,11 +26,15 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { employeeService } from "@/services/employeeService";
+import { useToast } from "@/components/ui/use-toast";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export function EmployeeActionsMenu({ employee, departments, designations, onUpdated }) {
   const [openState, setOpenState] = useState(null); // 'edit', 'status', 'role'
+  const [confirmState, setConfirmState] = useState(null); // 'status', 'role'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { toast } = useToast();
 
   // Edit Core Details State
   const [editForm, setEditForm] = useState({
@@ -50,6 +54,7 @@ export function EmployeeActionsMenu({ employee, departments, designations, onUpd
 
   const closeDialog = () => {
     setOpenState(null);
+    setConfirmState(null);
     setError(null);
   };
 
@@ -62,40 +67,76 @@ export function EmployeeActionsMenu({ employee, departments, designations, onUpd
     setError(null);
     try {
       await employeeService.updateEmployeeCore(employee.id, editForm);
+      toast({ title: "Success", description: "Employee details updated successfully." });
       onUpdated();
       closeDialog();
     } catch (err) {
       setError(err.message || "Failed to update employee details");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update employee details",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStatusSubmit = async (e) => {
+  const handleStatusSubmit = (e) => {
     e.preventDefault();
+    if (status === (employee.employment_status || "ACTIVE")) {
+      closeDialog();
+      return;
+    }
+    setConfirmState("status");
+  };
+
+  const executeStatusChange = async () => {
     setLoading(true);
     setError(null);
     try {
       await employeeService.updateEmployeeStatus(employee.id, status);
+      toast({ title: "Success", description: "Employment status updated successfully." });
       onUpdated();
       closeDialog();
     } catch (err) {
       setError(err.message || "Failed to update status");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update status",
+        variant: "error",
+      });
+      setConfirmState(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRoleSubmit = async (e) => {
+  const handleRoleSubmit = (e) => {
     e.preventDefault();
+    if (role === (employee.role || "EMPLOYEE")) {
+      closeDialog();
+      return;
+    }
+    setConfirmState("role");
+  };
+
+  const executeRoleChange = async () => {
     setLoading(true);
     setError(null);
     try {
       await employeeService.updateEmployeeRole(employee.user_id, role);
+      toast({ title: "Success", description: "Employee role updated successfully." });
       onUpdated();
       closeDialog();
     } catch (err) {
       setError(err.message || "Failed to update role");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update role",
+        variant: "error",
+      });
+      setConfirmState(null);
     } finally {
       setLoading(false);
     }
@@ -318,6 +359,63 @@ export function EmployeeActionsMenu({ employee, departments, designations, onUpd
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialogs */}
+      <ConfirmDialog
+        isOpen={confirmState === "status"}
+        onOpenChange={(open) => {
+          if (!open && !loading) setConfirmState(null);
+        }}
+        title="Change employee status?"
+        description={
+          <span className="flex flex-col gap-2 mt-2">
+            <span>
+              You are about to change {employee.first_name} {employee.last_name}'s status from{" "}
+              <strong className="font-semibold text-foreground">
+                {employee.employment_status || "ACTIVE"}
+              </strong>{" "}
+              to <strong className="font-semibold text-foreground">{status}</strong>.
+            </span>
+            {status === "EXITED" && (
+              <span className="text-destructive font-medium">
+                Setting to EXITED will permanently suspend the employee's login access.
+              </span>
+            )}
+            <span>Are you sure you want to continue?</span>
+          </span>
+        }
+        onConfirm={executeStatusChange}
+        loading={loading}
+        confirmText="Change Status"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmState === "role"}
+        onOpenChange={(open) => {
+          if (!open && !loading) setConfirmState(null);
+        }}
+        title="Change employee role?"
+        description={
+          <span className="flex flex-col gap-2 mt-2">
+            <span>
+              You are about to change {employee.first_name} {employee.last_name}'s role from{" "}
+              <strong className="font-semibold text-foreground">
+                {employee.role || "EMPLOYEE"}
+              </strong>{" "}
+              to <strong className="font-semibold text-foreground">{role}</strong>.
+            </span>
+            {role === "OWNER" && (
+              <span className="text-destructive font-medium">
+                Owner access provides elevated administrative permissions.
+              </span>
+            )}
+            <span>Are you sure you want to continue?</span>
+          </span>
+        }
+        onConfirm={executeRoleChange}
+        loading={loading}
+        confirmText="Change Role"
+      />
     </>
   );
 }

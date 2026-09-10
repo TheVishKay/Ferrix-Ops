@@ -27,7 +27,7 @@ const reportCategories = [
     icon: CalendarDays,
     tone: "amber",
     count: 4,
-    to: "/leave-management",
+    to: "/reports",
   },
   {
     title: "Expense Reports",

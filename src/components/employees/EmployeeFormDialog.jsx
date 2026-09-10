@@ -19,11 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { employeeService } from "@/services/employeeService";
+import { useToast } from "@/components/ui/use-toast";
 
 export function EmployeeFormDialog({ departments, designations, onSaved }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -72,9 +74,15 @@ export function EmployeeFormDialog({ departments, designations, onSaved }) {
         address: "",
         emergency_contact: "",
       });
+      toast({ title: "Success", description: "Employee created successfully." });
       if (onSaved) onSaved();
     } catch (err) {
       setError(err.message || "Failed to create employee");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create employee",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
