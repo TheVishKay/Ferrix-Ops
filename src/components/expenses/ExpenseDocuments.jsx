@@ -164,12 +164,6 @@ export default function ExpenseDocuments({ expenseId, expenseStatus, readOnly = 
     }
   };
 
-  const canUpload =
-    !readOnly &&
-    (expenseStatus === "DRAFT" ||
-      expenseStatus === "RETURNED_FOR_CORRECTION" ||
-      profile?.role === ROLES.OWNER ||
-      profile?.role === ROLES.ACCOUNTS);
   // Note: Employee can upload if DRAFT/RETURNED. ACCOUNTS/OWNER can upload technically via RLS but functionally we might restrict it. The plan says employee uploads.
 
   // Actually, limit employee uploads to DRAFT/RETURNED_FOR_CORRECTION based on RLS & workflow:

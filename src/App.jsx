@@ -1,11 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import {
   Activity,
-  Bell,
-  CalendarDays,
-  CheckSquare,
   Clock3,
-  LayoutDashboard,
   Settings as SettingsIcon,
   Sparkles,
   Users,

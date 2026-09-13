@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Bell, Menu, Search, Settings } from "lucide-react";
+import { Menu, Search, Settings } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

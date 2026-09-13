@@ -171,29 +171,56 @@ export default function BillsExpenses() {
         ? `${emp.first_name[0] || ""}${emp.last_name[0] || ""}`.toUpperCase()
         : "?";
       const catName = categories.find((c) => c.id === e.category_id)?.name || "Unknown";
+      const isOwn = emp?.user_id === user?.id;
+
+      let isActionableByMe = false;
+      if (profile?.role === ROLES.OWNER && e.status === "PENDING_OWNER_APPROVAL") {
+        isActionableByMe = true;
+      }
+      if (
+        profile?.role === ROLES.ACCOUNTS &&
+        (e.status === "SUBMITTED" || e.status === "PAYMENT_PENDING")
+      ) {
+        isActionableByMe = true;
+      }
+      if (isOwn && (e.status === "RETURNED_FOR_CORRECTION" || e.status === "DRAFT")) {
+        isActionableByMe = true;
+      }
+
       return {
         ...e,
         submittedBy: name,
         submittedByInitials: initials,
         submittedByTone: getTone(emp?.employee_code || name),
         categoryName: catName,
-        isOwn: emp?.user_id === user?.id,
+        isOwn,
+        isActionableByMe,
       };
     });
-  }, [expenses, categories, user?.id]);
+  }, [expenses, categories, user?.id, profile?.role]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return mappedExpenses.filter((e) => {
       const matchSearch =
         !q || `${e.submittedBy} ${e.vendor_name} ${e.expense_number}`.toLowerCase().includes(q);
-      const matchStatus = statusFilter === "all" || e.status === statusFilter;
+
+      let matchStatus = false;
+      if (statusFilter === "all") {
+        matchStatus = true;
+      } else if (statusFilter === "needs_action") {
+        matchStatus = e.isActionableByMe;
+      } else {
+        matchStatus = e.status === statusFilter;
+      }
+
       const matchCategory = categoryFilter === "all" || e.category_id === categoryFilter;
       return matchSearch && matchStatus && matchCategory;
     });
   }, [search, statusFilter, categoryFilter, mappedExpenses]);
 
   // Metrics (on filtered)
+  const actionableCount = filtered.filter((e) => e.isActionableByMe).length;
   const totalExpenses = filtered.reduce((sum, e) => sum + Number(e.amount), 0);
   const approvedSum = filtered
     .filter((e) => e.status === "PAYMENT_PENDING" || e.status === "PAID")
@@ -411,11 +438,15 @@ export default function BillsExpenses() {
       )}
 
       {/* Summary */}
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Expense summary">
+      <section
+        className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5"
+        aria-label="Expense summary"
+      >
         {[
+          { label: "Needs My Action", value: actionableCount, tone: "amber" },
           { label: "Total Shown", value: fmt(totalExpenses), tone: "cyan" },
           { label: "Approved / Paid", value: fmt(approvedSum), tone: "lime" },
-          { label: "Pending Review", value: fmt(pendingSum), tone: "amber" },
+          { label: "Pending Review", value: fmt(pendingSum), tone: "violet" },
           { label: "Rejected", value: fmt(rejectedSum), tone: "coral" },
         ].map((s) => (
           <div key={s.label} className="hr-card hr-metric-card">
@@ -532,6 +563,8 @@ export default function BillsExpenses() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Status: All</SelectItem>
+                <SelectItem value="needs_action">⚠️ Needs My Action</SelectItem>
+                <div className="h-px bg-border my-1 -mx-1" role="separator" />
                 {getUniqueStatuses().map((s) => (
                   <SelectItem key={s} value={s}>
                     {statusLabel[s] ?? s}
@@ -600,11 +633,18 @@ export default function BillsExpenses() {
                       <td className="font-display font-bold text-foreground">{fmt(exp.amount)}</td>
                       <td className="text-xs">{dt(exp.expense_date)}</td>
                       <td>
-                        <Badge
-                          className={`hr-status-badge hr-tone-${statusToneMap[exp.status] ?? "cyan"}`}
-                        >
-                          <span className="hr-mini-dot" /> {statusLabel[exp.status] ?? exp.status}
-                        </Badge>
+                        <div className="flex flex-col items-start gap-1.5">
+                          <Badge
+                            className={`hr-status-badge hr-tone-${statusToneMap[exp.status] ?? "cyan"}`}
+                          >
+                            <span className="hr-mini-dot" /> {statusLabel[exp.status] ?? exp.status}
+                          </Badge>
+                          {exp.isActionableByMe && (
+                            <span className="text-[10px] font-bold tracking-tight text-amber-600 dark:text-amber-500 flex items-center gap-1 uppercase">
+                              <AlertCircle className="size-3" /> Action Required
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <DropdownMenu>
@@ -705,8 +745,12 @@ export default function BillsExpenses() {
           {filtered.length === 0 && !loading && (
             <EmptyState
               icon={WalletCards}
-              title="No expenses found"
-              subtitle="Adjust your filters or create a new expense."
+              title={statusFilter === "needs_action" ? "No action required" : "No expenses found"}
+              subtitle={
+                statusFilter === "needs_action"
+                  ? "You're all caught up! No bills currently require your attention."
+                  : "Adjust your filters or create a new expense."
+              }
             />
           )}
         </div>

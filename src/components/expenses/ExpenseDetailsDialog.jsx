@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Calendar, FileText, CheckCircle2, XCircle, FileClock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import ExpenseDocuments from "./ExpenseDocuments";

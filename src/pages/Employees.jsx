@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { MoreHorizontal, Search, UserPlus, Users, Loader2 } from "lucide-react";
+import { MoreHorizontal, Search, Users, Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
