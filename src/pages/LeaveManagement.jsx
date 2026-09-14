@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLES } from "@/constants/roles";
 import { useToast } from "@/components/ui/use-toast";
@@ -7,7 +7,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, Loader2, CheckCircle2, XCircle, AlertCircle, X } from "lucide-react";
+import { CalendarDays, Loader2, CheckCircle2, XCircle, AlertCircle, X, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   fetchMyLeaveRequests,
   fetchAllLeaveRequests,
@@ -242,10 +249,136 @@ export default function LeaveManagement() {
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((r) => {
+      // 1. Status Filter
+      if (statusFilter !== "all" && r.status !== statusFilter) {
+        return false;
+      }
+
+      // 2. Date Filter
+      if (dateFilter !== "all") {
+        const reqStart = new Date(r.start_date);
+        const reqEnd = new Date(r.end_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (dateFilter === "today") {
+          // Check if today falls between reqStart and reqEnd inclusive
+          if (today < reqStart || today > reqEnd) return false;
+        } else if (dateFilter === "thisWeek") {
+          // Monday through Sunday
+          const day = today.getDay(); // 0 is Sunday
+          const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+          const startOfWeek = new Date(today.setDate(diff));
+          startOfWeek.setHours(0, 0, 0, 0);
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(endOfWeek.getDate() + 6);
+          endOfWeek.setHours(23, 59, 59, 999);
+          if (reqStart > endOfWeek || reqEnd < startOfWeek) return false;
+        } else if (dateFilter === "last7days") {
+          const startOf7Days = new Date(today);
+          startOf7Days.setDate(today.getDate() - 6);
+          const endOfToday = new Date(today);
+          endOfToday.setHours(23, 59, 59, 999);
+          if (reqStart > endOfToday || reqEnd < startOf7Days) return false;
+        } else if (dateFilter === "thisMonth") {
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          const endOfMonth = new Date(
+            today.getFullYear(),
+            today.getMonth() + 1,
+            0,
+            23,
+            59,
+            59,
+            999,
+          );
+          if (reqStart > endOfMonth || reqEnd < startOfMonth) return false;
+        }
+      }
+
+      // 3. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        if (profile?.role === ROLES.OWNER) {
+          const emp = r.employees;
+          if (!emp) return false;
+          const matchName = `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(q);
+          const matchCode = (emp.employee_code || "").toLowerCase().includes(q);
+          const matchEmail = (emp.email || "").toLowerCase().includes(q);
+          if (!matchName && !matchCode && !matchEmail) return false;
+        } else {
+          // Employee/Accounts scope: search by reason
+          if (!(r.reason || "").toLowerCase().includes(q)) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [requests, statusFilter, dateFilter, searchQuery, profile?.role]);
+
+  const renderToolbar = (isOwner) => (
+    <div className="flex flex-wrap items-center gap-2 p-5 border-b border-border w-full sm:w-auto">
+      <label className="hr-table-search">
+        <Search className="size-3.5 text-muted-foreground" />
+        <Input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={isOwner ? "Search employee name, code, email..." : "Search by reason..."}
+          className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
+          disabled={loading}
+        />
+      </label>
+      <Select value={statusFilter} onValueChange={setStatusFilter} disabled={loading}>
+        <SelectTrigger className="h-9 min-w-[120px] max-w-[160px] flex-1 text-xs">
+          <SelectValue placeholder="Status: All" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Status: All</SelectItem>
+          <SelectItem value="PENDING">Pending</SelectItem>
+          <SelectItem value="APPROVED">Approved</SelectItem>
+          <SelectItem value="REJECTED">Rejected</SelectItem>
+          <SelectItem value="CANCELLED">Cancelled</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select value={dateFilter} onValueChange={setDateFilter} disabled={loading}>
+        <SelectTrigger className="h-9 min-w-[120px] max-w-[160px] flex-1 text-xs">
+          <SelectValue placeholder="Date: All Dates" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Date: All Dates</SelectItem>
+          <SelectItem value="today">Today</SelectItem>
+          <SelectItem value="thisWeek">This Week</SelectItem>
+          <SelectItem value="last7days">Last 7 Days</SelectItem>
+          <SelectItem value="thisMonth">This Month</SelectItem>
+        </SelectContent>
+      </Select>
+      {(searchQuery || statusFilter !== "all" || dateFilter !== "all") && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSearchQuery("");
+            setStatusFilter("all");
+            setDateFilter("all");
+          }}
+          className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+          disabled={loading}
+        >
+          <X className="size-3 mr-1" /> Clear
+        </Button>
+      )}
+    </div>
+  );
+
   if (!profile) return null;
 
   const pendingQueue = requests.filter((r) => r.status === "PENDING");
-  const historyQueue = requests.filter((r) => r.status !== "PENDING");
+  const historyQueue = filteredRequests.filter((r) => r.status !== "PENDING");
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -309,16 +442,17 @@ export default function LeaveManagement() {
                 My Leave Requests
               </h2>
             </div>
+            {renderToolbar(false)}
             <div className="overflow-x-auto min-h-[300px] relative">
               {loading ? (
                 <div className="flex h-64 flex-col items-center justify-center">
                   <Loader2 className="size-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : requests.length === 0 ? (
+              ) : filteredRequests.length === 0 ? (
                 <EmptyState
                   icon={CalendarDays}
-                  title="No leave requests"
-                  subtitle="You haven't requested any leaves yet."
+                  title="No leave requests found"
+                  subtitle="You haven't requested any leaves or none match your filters."
                 />
               ) : (
                 <table className="hr-table w-full min-w-[700px]">
@@ -333,7 +467,7 @@ export default function LeaveManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {requests.map((r) => (
+                    {filteredRequests.map((r) => (
                       <tr key={r.id}>
                         <td className="font-medium whitespace-nowrap text-xs text-foreground">
                           {r.start_date} to {r.end_date}
@@ -430,6 +564,7 @@ export default function LeaveManagement() {
                 Leave History
               </h2>
             </div>
+            {renderToolbar(true)}
             <div className="overflow-x-auto min-h-[300px] relative">
               {loading ? (
                 <div className="flex h-64 flex-col items-center justify-center">
@@ -438,8 +573,8 @@ export default function LeaveManagement() {
               ) : historyQueue.length === 0 ? (
                 <EmptyState
                   icon={CalendarDays}
-                  title="No leave history"
-                  subtitle="No reviewed leave requests yet."
+                  title="No leave history found"
+                  subtitle="No reviewed leave requests match your filters."
                 />
               ) : (
                 <table className="hr-table w-full min-w-[700px]">
