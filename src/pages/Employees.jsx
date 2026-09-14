@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { MoreHorizontal, Search, Users, Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -39,6 +39,7 @@ const displayStatus = { ACTIVE: "Active", INACTIVE: "Inactive", EXITED: "Exited"
 
 export default function Employees() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [search, setSearch] = useState(searchParams.get("q") || "");
   const [deptFilter, setDeptFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -297,7 +298,15 @@ export default function Employees() {
                 </thead>
                 <tbody>
                   {filtered.map((emp) => (
-                    <tr key={emp.id}>
+                    <tr
+                      key={emp.id}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      onDoubleClick={(e) => {
+                        // Prevent navigation if clicking on an interactive element (e.g. dropdown menu)
+                        if (e.target.closest("button") || e.target.closest("[role='menu']")) return;
+                        navigate("/employees/" + emp.id);
+                      }}
+                    >
                       <td>
                         <div className="flex items-center gap-3">
                           <Avatar className="size-9 rounded-xl">

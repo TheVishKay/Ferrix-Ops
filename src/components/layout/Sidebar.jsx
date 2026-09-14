@@ -34,7 +34,7 @@ const navItems = [
   },
   { label: "Bills & Expenses", icon: WalletCards, to: "/bills" },
   { label: "Reports", icon: Activity, to: "/reports", allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS] },
-  { label: "Settings", icon: Settings, to: "/settings" },
+  { label: "Settings", icon: Settings, to: "/settings", allowedRoles: [ROLES.OWNER] },
 ];
 
 export default function Sidebar({ mobileOpen, onClose }) {

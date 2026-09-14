@@ -126,4 +126,22 @@ export const employeeService = {
     const { error } = await supabase.from("designations").update(data).eq("id", id);
     if (error) throw error;
   },
+
+  async getEmployeeById(employeeId) {
+    const { data, error } = await supabase
+      .from("employees")
+      .select(
+        `
+        *,
+        profiles ( role, avatar_url, email ),
+        departments ( id, name ),
+        designations ( id, name )
+      `,
+      )
+      .eq("id", employeeId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
 };

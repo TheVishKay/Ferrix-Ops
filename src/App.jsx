@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import LeaveReports from "./pages/LeaveReports";
+import EmployeeProfile from "./pages/EmployeeProfile";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
 import { ROLES } from "./constants/roles";
@@ -50,6 +51,17 @@ const routes = [
       tone: "cyan",
     },
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
+  },
+  {
+    path: "/employees/:employeeId",
+    element: <EmployeeProfile />,
+    header: {
+      title: "Employee Profile",
+      subtitle: "View employee details",
+      icon: Users,
+      tone: "cyan",
+    },
+    allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS, ROLES.EMPLOYEE],
   },
   {
     path: "/attendance",
@@ -113,6 +125,7 @@ const routes = [
       icon: SettingsIcon,
       tone: "violet",
     },
+    allowedRoles: [ROLES.OWNER],
   },
   {
     path: "/profile",
