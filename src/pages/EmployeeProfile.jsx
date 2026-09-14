@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { ROLES } from "@/constants/roles";
 import { employeeService } from "@/services/employeeService";
+import { fetchEmployeeLeaveRequests } from "@/services/leaveService";
 import { supabase } from "@/lib/supabase";
 import { EmptyState } from "@/components/shared";
 import {
@@ -17,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock } from "lucide-react";
+import { Clock, CalendarRange } from "lucide-react";
 
 const toneClass = (t) => `hr-tone-${t}`;
 
@@ -181,6 +182,154 @@ function EmployeeAttendanceTab({ employeeId }) {
   );
 }
 
+function EmployeeLeaveTab({ employeeId }) {
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    let mounted = true;
+    async function fetchLeave() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await fetchEmployeeLeaveRequests(employeeId);
+
+        if (mounted) setRecords(data || []);
+      } catch (err) {
+        console.error(err);
+        if (mounted) setError("Failed to load leave history.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    fetchLeave();
+    return () => {
+      mounted = false;
+    };
+  }, [employeeId]);
+
+  const filteredRecords =
+    filter === "all" ? records : records.filter((r) => r.status === filter.toUpperCase());
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold text-foreground">Leave History</h2>
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {loading ? (
+        <div className="py-12 flex justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : error ? (
+        <div className="py-8 flex flex-col items-center justify-center text-center">
+          <AlertCircle className="size-8 text-destructive mb-2 opacity-80" />
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      ) : filteredRecords.length === 0 ? (
+        <EmptyState
+          icon={CalendarRange}
+          title="No leave records"
+          description="No leave history found for this employee."
+        />
+      ) : (
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 font-medium border-b border-border">Type / Reason</th>
+                  <th className="px-4 py-3 font-medium border-b border-border">Dates</th>
+                  <th className="px-4 py-3 font-medium border-b border-border">Days</th>
+                  <th className="px-4 py-3 font-medium border-b border-border">Status</th>
+                  <th className="px-4 py-3 font-medium border-b border-border">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredRecords.map((r) => {
+                  const s = new Date(r.start_date);
+                  const e = new Date(r.end_date);
+                  const diffTime = Math.abs(e - s);
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                  // Same day leave
+                  const dateStr =
+                    r.start_date === r.end_date
+                      ? s.toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : `${s.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${e.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+
+                  const statusColors = {
+                    PENDING: "hr-tone-amber",
+                    APPROVED: "hr-tone-lime",
+                    REJECTED: "hr-tone-coral",
+                    CANCELLED: "hr-tone-violet",
+                  };
+
+                  const displayStatusTxt = {
+                    PENDING: "Pending",
+                    APPROVED: "Approved",
+                    REJECTED: "Rejected",
+                    CANCELLED: "Cancelled",
+                  };
+
+                  return (
+                    <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 text-foreground">
+                        <div className="max-w-[200px] truncate" title={r.reason}>
+                          {r.reason || "—"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-foreground whitespace-nowrap">{dateStr}</td>
+                      <td className="px-4 py-3 text-foreground whitespace-nowrap">
+                        {diffDays} day{diffDays > 1 ? "s" : ""}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Badge
+                          className={`hr-status-badge ${statusColors[r.status] || "hr-tone-cyan"}`}
+                        >
+                          <span className="hr-mini-dot" />
+                          {displayStatusTxt[r.status] || r.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-foreground">
+                        <div
+                          className="max-w-[150px] truncate text-muted-foreground italic"
+                          title={r.owner_remarks || ""}
+                        >
+                          {r.owner_remarks || "—"}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EmployeeProfile() {
   const { employeeId } = useParams();
   const navigate = useNavigate();
@@ -291,6 +440,7 @@ export default function EmployeeProfile() {
   const departmentName = employee.departments?.name;
   const designationName = employee.designations?.name;
   const avatarUrl = employee.profiles?.avatar_url;
+  const canViewLeave = profile?.role === ROLES.OWNER || profile?.id === employee?.user_id;
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -365,6 +515,18 @@ export default function EmployeeProfile() {
           >
             Attendance
           </button>
+          {canViewLeave && (
+            <button
+              onClick={() => setActiveTab("leave")}
+              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "leave"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Leave History
+            </button>
+          )}
         </div>
 
         {/* Profile Details */}
@@ -401,6 +563,8 @@ export default function EmployeeProfile() {
           )}
 
           {activeTab === "attendance" && <EmployeeAttendanceTab employeeId={employeeId} />}
+
+          {activeTab === "leave" && canViewLeave && <EmployeeLeaveTab employeeId={employeeId} />}
         </div>
       </section>
     </main>

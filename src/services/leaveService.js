@@ -21,6 +21,28 @@ export const fetchMyLeaveRequests = async () => {
   return data;
 };
 
+export const fetchEmployeeLeaveRequests = async (employeeId) => {
+  const { data, error } = await supabase
+    .from("leave_requests")
+    .select(
+      `
+      id,
+      start_date,
+      end_date,
+      reason,
+      status,
+      owner_remarks,
+      created_at,
+      reviewed_at
+    `,
+    )
+    .eq("employee_id", employeeId)
+    .order("start_date", { ascending: false });
+
+  if (error) throw error;
+  return data;
+};
+
 export const fetchAllLeaveRequests = async () => {
   const { data, error } = await supabase
     .from("leave_requests")
