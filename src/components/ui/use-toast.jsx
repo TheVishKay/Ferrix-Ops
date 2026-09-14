@@ -27,5 +27,5 @@ export function useToast() {
     };
   }, []);
 
-  return { toasts };
+  return { toasts, toast };
 }

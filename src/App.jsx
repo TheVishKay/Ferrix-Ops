@@ -6,6 +6,7 @@ import {
   Sparkles,
   Users,
   WalletCards,
+  CalendarDays,
 } from "lucide-react";
 
 import AppLayout from "./components/layout/AppLayout";
@@ -14,12 +15,14 @@ import { Toaster } from "./components/ui/toaster";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
+import LeaveManagement from "./pages/LeaveManagement";
 import BillsExpenses from "./pages/BillsExpenses";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import LeaveReports from "./pages/LeaveReports";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
 import { ROLES } from "./constants/roles";
@@ -59,6 +62,17 @@ const routes = [
     },
   },
   {
+    path: "/leave",
+    element: <LeaveManagement />,
+    header: {
+      title: "Leave Management",
+      subtitle: "Request and manage employee leaves",
+      icon: CalendarDays,
+      tone: "amber",
+    },
+    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE],
+  },
+  {
     path: "/bills",
     element: <BillsExpenses />,
     header: {
@@ -78,6 +92,17 @@ const routes = [
       tone: "lime",
     },
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
+  },
+  {
+    path: "/reports/leave",
+    element: <LeaveReports />,
+    header: {
+      title: "Leave Reports",
+      subtitle: "Analytics and leave request overview",
+      icon: CalendarDays,
+      tone: "amber",
+    },
+    allowedRoles: [ROLES.OWNER],
   },
   {
     path: "/settings",
