@@ -133,6 +133,8 @@ export default function LeaveManagement() {
   const { profile } = useAuth();
   const { toast } = useToast();
 
+  const canManageOwnLeave = profile?.role === ROLES.EMPLOYEE || profile?.role === ROLES.ACCOUNTS;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -154,7 +156,7 @@ export default function LeaveManagement() {
     try {
       setLoading(true);
       setError(null);
-      if (profile.role === ROLES.EMPLOYEE) {
+      if (canManageOwnLeave) {
         const data = await fetchMyLeaveRequests();
         setRequests(data || []);
       } else if (profile.role === ROLES.OWNER) {
@@ -167,7 +169,7 @@ export default function LeaveManagement() {
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, canManageOwnLeave]);
 
   useEffect(() => {
     fetchData();
@@ -242,18 +244,6 @@ export default function LeaveManagement() {
 
   if (!profile) return null;
 
-  if (profile.role === ROLES.ACCOUNTS) {
-    return (
-      <main className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 px-4 py-5">
-        <EmptyState
-          icon={CalendarDays}
-          title="Access Denied"
-          subtitle="Accounts role does not have access to Leave Management."
-        />
-      </main>
-    );
-  }
-
   const pendingQueue = requests.filter((r) => r.status === "PENDING");
   const historyQueue = requests.filter((r) => r.status !== "PENDING");
 
@@ -266,7 +256,7 @@ export default function LeaveManagement() {
         </div>
       )}
 
-      {profile.role === ROLES.EMPLOYEE && (
+      {canManageOwnLeave && (
         <>
           <section className="hr-card p-5">
             <h2 className="font-display text-lg font-bold tracking-tight text-foreground mb-4">

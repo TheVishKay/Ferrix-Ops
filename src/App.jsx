@@ -70,7 +70,7 @@ const routes = [
       icon: CalendarDays,
       tone: "amber",
     },
-    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE],
+    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE, ROLES.ACCOUNTS],
   },
   {
     path: "/bills",
