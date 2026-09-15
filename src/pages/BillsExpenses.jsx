@@ -163,6 +163,10 @@ export default function BillsExpenses() {
   }, [user, profile, fetchExpenses]);
 
   // Derived state
+  const categoryMap = useMemo(() => {
+    return new Map(categories.map((c) => [c.id, c.name]));
+  }, [categories]);
+
   const mappedExpenses = useMemo(() => {
     return expenses.map((e) => {
       const emp = e.employees;
@@ -170,7 +174,7 @@ export default function BillsExpenses() {
       const initials = emp
         ? `${emp.first_name[0] || ""}${emp.last_name[0] || ""}`.toUpperCase()
         : "?";
-      const catName = categories.find((c) => c.id === e.category_id)?.name || "Unknown";
+      const catName = categoryMap.get(e.category_id) || "Unknown";
       const isOwn = emp?.user_id === user?.id;
 
       let isActionableByMe = false;
@@ -197,7 +201,7 @@ export default function BillsExpenses() {
         isActionableByMe,
       };
     });
-  }, [expenses, categories, user?.id, profile?.role]);
+  }, [expenses, categoryMap, user?.id, profile?.role]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
