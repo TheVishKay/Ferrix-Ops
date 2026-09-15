@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,10 @@ import { supabase } from "@/lib/supabase";
 export default function ExpenseDetailsDialog({ isOpen, onClose, expense, categories }) {
   const [payment, setPayment] = useState(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
+
+  const categoryMap = useMemo(() => {
+    return new Map(categories?.map((c) => [c.id, c.name]) || []);
+  }, [categories]);
 
   useEffect(() => {
     if (isOpen && expense?.status === "PAID") {
@@ -36,7 +40,7 @@ export default function ExpenseDetailsDialog({ isOpen, onClose, expense, categor
 
   if (!isOpen || !expense) return null;
 
-  const categoryName = categories.find((c) => c.id === expense.category_id)?.name || "Unknown";
+  const categoryName = categoryMap.get(expense.category_id) || "Unknown";
 
   const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
   const dt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
