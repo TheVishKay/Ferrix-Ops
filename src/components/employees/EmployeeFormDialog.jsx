@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,15 @@ export function EmployeeFormDialog({ departments, designations, onSaved }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { toast } = useToast();
+
+  const activeDepartments = useMemo(
+    () => departments.filter((d) => d.is_active !== false),
+    [departments],
+  );
+  const activeDesignations = useMemo(
+    () => designations.filter((d) => d.is_active !== false),
+    [designations],
+  );
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -179,13 +188,11 @@ export function EmployeeFormDialog({ departments, designations, onSaved }) {
                     <SelectValue placeholder="Select Dept" />
                   </SelectTrigger>
                   <SelectContent>
-                    {departments
-                      .filter((d) => d.is_active !== false)
-                      .map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name}
-                        </SelectItem>
-                      ))}
+                    {activeDepartments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -200,13 +207,11 @@ export function EmployeeFormDialog({ departments, designations, onSaved }) {
                     <SelectValue placeholder="Select Desig" />
                   </SelectTrigger>
                   <SelectContent>
-                    {designations
-                      .filter((d) => d.is_active !== false)
-                      .map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name}
-                        </SelectItem>
-                      ))}
+                    {activeDesignations.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
