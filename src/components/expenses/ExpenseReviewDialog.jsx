@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Loader2, CheckCircle2, XCircle, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ExpenseDocuments from "./ExpenseDocuments";
@@ -15,9 +15,15 @@ export default function ExpenseReviewDialog({
 }) {
   const [remarks, setRemarks] = useState("");
 
+  const categoryMap = useMemo(() => {
+    const map = new Map();
+    categories?.forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [categories]);
+
   if (!isOpen || !expense) return null;
 
-  const categoryName = categories.find((c) => c.id === expense.category_id)?.name || "Unknown";
+  const categoryName = categoryMap.get(expense.category_id) || "Unknown";
   const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
   const dt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
 
