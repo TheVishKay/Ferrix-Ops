@@ -1,15 +1,16 @@
 # Employee Operations Management System V1
 
-The Employee Operations Management System V1 is a role-based internal application designed to streamline core HR and administrative workflows. 
+The Employee Operations Management System V1 is a role-based internal application designed to streamline core HR and administrative workflows.
 
 This repository implements the V1 specification, which includes:
+
 - Employee Management
 - Attendance Management
 - Bills / Expenses (with document attachments and multi-stage review)
 - A role-aware Dashboard
 - End-to-end security and auditability via Supabase Auth and Row Level Security (RLS)
 
-*Note: This is an internal tool. Certain advanced modules (Leave, Tasks, etc.) are intentionally deferred for future phases.*
+_Note: This is an internal tool. Certain advanced modules (Leave, Tasks, etc.) are intentionally deferred for future phases._
 
 ## 1. Roles & Permissions
 
@@ -31,11 +32,13 @@ The system operates strictly on a three-tier role architecture.
 ## 3. Local Development
 
 ### Prerequisites
+
 - Node.js (v20+ recommended)
 - npm (v10+ recommended)
 - Supabase CLI (if running the backend locally or deploying Edge Functions)
 
 ### Setup Commands
+
 ```bash
 # Install dependencies
 npm install
@@ -68,7 +71,7 @@ To set up the V1 backend infrastructure, you must configure a Supabase project:
 1. **Create the Project**: Create a new Supabase project in the Supabase Dashboard.
 2. **Apply Migrations**: The database schema, RLS policies, and Storage buckets are defined declaratively. Run all migrations in the `supabase/migrations` folder using the Supabase CLI:
    `supabase db push` or apply them manually in order.
-3. **Configure Auth**: 
+3. **Configure Auth**:
    - Enable the **Email** provider.
    - Configure your **Site URL** and **Redirect URLs** in the Supabase Auth settings to match your production domain.
 4. **Storage Requirements**: The migration creates a private bucket called `expense-documents`. RLS policies strictly control read/write access.
@@ -81,6 +84,7 @@ To set up the V1 backend infrastructure, you must configure a Supabase project:
 ## 6. Database Architecture
 
 The PostgreSQL schema relies on the following core tables:
+
 - `profiles`: Links Supabase Auth UUIDs to application roles.
 - `employees`: Core employment data (department, designation, status, employee code).
 - `employee_personal_info`: Sensitive PII isolated for stricter access control.
@@ -94,6 +98,7 @@ The PostgreSQL schema relies on the following core tables:
 ## 7. Employee Provisioning Workflow
 
 The system uses a strict provisioning flow to ensure security:
+
 1. **OWNER** submits the new employee form.
 2. The `create-employee` Edge Function is invoked.
 3. The function provisions a Supabase Auth user via the Admin API.
@@ -104,6 +109,7 @@ The system uses a strict provisioning flow to ensure security:
 ## 8. Expense Workflow
 
 Expenses progress through strict statuses:
+
 - **DRAFT**: Employee is preparing the claim. Can upload/delete documents.
 - **PENDING_REVIEW**: Submitted for OWNER approval.
 - **RETURNED_FOR_CORRECTION**: ACCOUNTS requires the employee to fix the claim. (Employee can edit/upload documents again).
@@ -134,12 +140,13 @@ The application is a standard React Vite Single Page Application (SPA). To deplo
 
 1. Build the application using `npm run build`.
 2. The output will be generated in the `dist/` directory.
-3. **SPA Fallback Required**: You must configure your host to rewrite all unhandled routes (e.g., `/*`) to `/index.html` to support React Router client-side routing. *(Provider-specific configuration files like `vercel.json` or `_redirects` will be added once the host is finalized.)*
+3. **SPA Fallback Required**: You must configure your host to rewrite all unhandled routes (e.g., `/*`) to `/index.html` to support React Router client-side routing. _(Provider-specific configuration files like `vercel.json` or `_redirects` will be added once the host is finalized.)_
 4. Provide `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in your host's environment variable settings.
 
 ## 12. Deferred V1 Functionality
 
 The following modules are visible in the UI for future-proofing but are intentionally **not functional** in the V1 operational release:
+
 - Tasks / Workflows
 - Leave Management
 - Notifications
@@ -149,6 +156,7 @@ The following modules are visible in the UI for future-proofing but are intentio
 ## 13. Known Accepted V1 Risks
 
 The following technical compromises have been audited and accepted for V1:
+
 1. **Non-atomic Auth/DB Provisioning**: Creating an Auth user and their DB records is not a true atomic distributed transaction. A runtime crash between the two steps could leave an orphaned Auth user. A compensating rollback is implemented to mitigate this.
 2. **Client-Provided MIME Metadata**: The frontend determines MIME types for uploaded documents (jpeg/png/pdf) without deep content inspection on the backend.
 3. **Orphaned Storage Objects**: If an expense document's database metadata deletion succeeds but the subsequent Storage API delete call fails due to a hard interruption, an orphaned file may remain in the bucket.
