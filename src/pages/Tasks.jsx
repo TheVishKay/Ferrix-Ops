@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
-import { tasks, taskStatuses, taskPriorities, employees } from "@/data/mockData";
+import { taskStatuses, taskPriorities } from "@/data/mockData";
 import { EmptyState } from "@/components/shared";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
+import * as taskService from "@/services/taskService";
+import { getEmployees } from "@/services/employeeService";
 
 const toneClass = (t) => `hr-tone-${t}`;
 
@@ -59,7 +61,10 @@ export default function Tasks() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
-  const [localTasks, setLocalTasks] = useState(tasks);
+  const [localTasks, setLocalTasks] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -71,6 +76,27 @@ export default function Tasks() {
     status: "CREATED",
     dueDate: "",
   });
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const [tasksRes, empRes] = await Promise.all([taskService.getTasks(), getEmployees()]);
+        if (tasksRes.error) throw tasksRes.error;
+        if (empRes.error) throw empRes.error;
+
+        setLocalTasks(tasksRes.data);
+        setEmployees(empRes.data);
+      } catch (err) {
+        console.error("Error loading tasks page data:", err);
+        setError("Failed to load tasks.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const handleOpenTaskModal = (task = null) => {
     if (task) {
@@ -90,40 +116,32 @@ export default function Tasks() {
     setIsTaskModalOpen(true);
   };
 
-  const handleSaveTask = () => {
+  const handleSaveTask = async () => {
     if (!taskForm.title || !taskForm.assignedToId) return;
 
-    const assignedEmp = employees.find((e) => e.id === taskForm.assignedToId);
-
     if (editingTask) {
-      setLocalTasks((prev) =>
-        prev.map((t) =>
-          t.id === editingTask.id
-            ? {
-                ...t,
-                ...taskForm,
-                assignedTo: assignedEmp?.name,
-                assignedToInitials: assignedEmp?.initials,
-                assignedToTone: assignedEmp?.tone,
-              }
-            : t,
-        ),
-      );
+      // Optimistic update omitted for simplicity, refreshing from DB instead
+      const res = await taskService.updateTask(editingTask.id, taskForm);
+      if (res.error) {
+        alert("Failed to update task");
+        return;
+      }
     } else {
-      const newTask = {
-        ...taskForm,
-        id: `TSK-${Math.floor(Math.random() * 10000)
-          .toString()
-          .padStart(4, "0")}`,
-        assignedTo: assignedEmp?.name,
-        assignedToInitials: assignedEmp?.initials,
-        assignedToTone: assignedEmp?.tone,
-        tags: [],
-        createdOn: new Date().toISOString().split("T")[0],
-      };
-      setLocalTasks((prev) => [...prev, newTask]);
+      const res = await taskService.createTask(taskForm);
+      if (res.error) {
+        alert("Failed to create task");
+        return;
+      }
     }
     setIsTaskModalOpen(false);
+
+    // Refresh task list
+    setIsLoading(true);
+    const tasksRes = await taskService.getTasks();
+    if (!tasksRes.error) {
+      setLocalTasks(tasksRes.data);
+    }
+    setIsLoading(false);
   };
 
   const onDragEnd = async (result) => {
@@ -153,18 +171,52 @@ export default function Tasks() {
       const [reorderedItem] = newTasks.splice(sourceAbsoluteIndex, 1);
       newTasks.splice(destinationAbsoluteIndex, 0, reorderedItem);
 
+      // Optimistically update UI
       setLocalTasks(newTasks);
+
+      // Calculate new position
+      // To keep it simple and safe for floats:
+      // If we move it to the very start: new position is the first item's position - 1000
+      // If we move it to the very end: new position is the last item's position + 1000
+      // If we move it between two items: new position is (prev + next) / 2
+      let newPosition = 0;
+      if (destinationAbsoluteIndex === 0) {
+        newPosition = (newTasks[1]?.position || 1000) - 1000;
+      } else if (destinationAbsoluteIndex === newTasks.length - 1) {
+        newPosition = (newTasks[newTasks.length - 2]?.position || 0) + 1000;
+      } else {
+        const prevPosition = newTasks[destinationAbsoluteIndex - 1].position;
+        const nextPosition = newTasks[destinationAbsoluteIndex + 1].position;
+        newPosition = (prevPosition + nextPosition) / 2;
+      }
+
+      reorderedItem.position = newPosition;
+
+      // Persist to Supabase
+      const res = await taskService.updateTaskOrder([
+        { id: reorderedItem.id, position: newPosition },
+      ]);
+      if (res.error) {
+        console.error("Failed to update order", res.error);
+        // Revert on failure
+        const revertTasks = Array.from(newTasks);
+        revertTasks.splice(destinationAbsoluteIndex, 1);
+        revertTasks.splice(sourceAbsoluteIndex, 0, reorderedItem);
+        setLocalTasks(revertTasks);
+      }
     }
   };
 
-  const handleDeleteTask = (taskId) => {
+  const handleDeleteTask = async (taskId) => {
     if (!isOwner) return;
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+
+    const res = await taskService.deleteTask(taskId);
+    if (res.error) {
+      alert("Failed to delete task");
+      return;
+    }
     setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
-    supabase
-      .from("tasks")
-      .delete()
-      .eq("id", taskId)
-      .catch(() => {});
   };
 
   const filtered = useMemo(() => {
@@ -184,7 +236,7 @@ export default function Tasks() {
       {/* Summary */}
       <section className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Task summary">
         {[
-          { label: "Total Tasks", value: tasks.length, tone: "cyan" },
+          { label: "Total Tasks", value: localTasks.length, tone: "cyan" },
           { label: "In Progress", value: countByStatus("IN_PROGRESS"), tone: "amber" },
           { label: "For Review", value: countByStatus("READY_FOR_REVIEW"), tone: "violet" },
           { label: "Completed", value: countByStatus("COMPLETED"), tone: "lime" },
@@ -276,155 +328,162 @@ export default function Tasks() {
           </div>
         </div>
         <div className="overflow-x-auto p-5">
-          <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex flex-col items-center pb-4 max-w-3xl mx-auto">
-              <div className="flex flex-col w-full bg-muted/10 rounded-xl p-4 border border-border">
-                <Droppable droppableId="tasks-list">
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`flex-1 flex flex-col gap-0 min-h-[150px] transition-colors rounded-lg ${
-                        snapshot.isDraggingOver ? "bg-muted/50" : ""
-                      }`}
-                    >
-                      {filtered.map((task, index) => {
-                        const assignedEmployee = employees.find((e) => e.id === task.assignedToId);
-                        const designation = assignedEmployee
-                          ? assignedEmployee.designation
-                          : "Employee";
-                        return (
-                          <Draggable key={task.id} draggableId={task.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className="flex flex-col items-center w-full"
-                                style={{
-                                  ...provided.draggableProps.style,
-                                }}
-                              >
-                                <div
-                                  className={`hr-card p-5 text-left w-full transition-shadow relative group ${
-                                    snapshot.isDragging
-                                      ? "shadow-lg ring-2 ring-primary/30 z-50 bg-background"
-                                      : "shadow-sm hover:shadow-md bg-background"
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between mb-3">
-                                    <div className="flex items-center gap-3">
-                                      <Badge
-                                        className={`hr-status-badge ${toneClass(statusToneMap[task.status] ?? "slate")}`}
-                                      >
-                                        <span className="hr-mini-dot" /> {statusLabel[task.status]}
-                                      </Badge>
-                                      <Badge
-                                        variant="outline"
-                                        className={`text-[10px] border-border bg-muted/30 ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
-                                      >
-                                        Priority: {task.priority}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-mono text-[11px] text-muted-foreground">
-                                        {task.id}
-                                      </span>
-                                      {isOwner && (
-                                        <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                            onClick={() => handleOpenTaskModal(task)}
+          {isLoading && (
+            <div className="p-12 text-center text-muted-foreground">Loading tasks...</div>
+          )}
+          {error && <div className="p-12 text-center text-destructive">{error}</div>}
+
+          {!isLoading && !error && (
+            <>
+              <DragDropContext onDragEnd={onDragEnd}>
+                <div className="flex flex-col items-center pb-4 max-w-3xl mx-auto">
+                  <div className="flex flex-col w-full bg-muted/10 rounded-xl p-4 border border-border">
+                    <Droppable droppableId="tasks-list">
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`flex-1 flex flex-col gap-0 min-h-[150px] transition-colors rounded-lg ${
+                            snapshot.isDraggingOver ? "bg-muted/50" : ""
+                          }`}
+                        >
+                          {filtered.map((task, index) => {
+                            const designation = task.designationName || "Employee";
+                            return (
+                              <Draggable key={task.id} draggableId={task.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className="flex flex-col items-center w-full"
+                                    style={{
+                                      ...provided.draggableProps.style,
+                                    }}
+                                  >
+                                    <div
+                                      className={`hr-card p-5 text-left w-full transition-shadow relative group ${
+                                        snapshot.isDragging
+                                          ? "shadow-lg ring-2 ring-primary/30 z-50 bg-background"
+                                          : "shadow-sm hover:shadow-md bg-background"
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                          <Badge
+                                            className={`hr-status-badge ${toneClass(statusToneMap[task.status] ?? "slate")}`}
                                           >
-                                            <Edit2 className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                            onClick={() => handleDeleteTask(task.id)}
+                                            <span className="hr-mini-dot" />{" "}
+                                            {statusLabel[task.status]}
+                                          </Badge>
+                                          <Badge
+                                            variant="outline"
+                                            className={`text-[10px] border-border bg-muted/30 ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
                                           >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                          </Button>
+                                            Priority: {task.priority}
+                                          </Badge>
                                         </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <h4 className="font-medium text-base text-foreground mb-1.5">
-                                    {task.title}
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground mb-4">
-                                    {task.description}
-                                  </p>
-                                  <div className="flex flex-wrap gap-2 mb-4">
-                                    {task.tags.map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="inline-block rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <div className="flex items-center justify-between pt-4 border-t border-border mt-auto">
-                                    <div className="flex items-center gap-3">
-                                      <Avatar className="size-8 rounded-md">
-                                        <AvatarFallback
-                                          className={`hr-avatar text-xs ${toneClass(task.assignedToTone)}`}
-                                        >
-                                          {task.assignedToInitials}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex flex-col">
-                                        <span className="text-sm font-medium text-foreground leading-none">
-                                          {task.assignedTo}
-                                        </span>
-                                        <span className="text-[11px] text-muted-foreground mt-1">
-                                          {designation}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono text-[11px] text-muted-foreground">
+                                            {task.id}
+                                          </span>
+                                          {isOwner && (
+                                            <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                                onClick={() => handleOpenTaskModal(task)}
+                                              >
+                                                <Edit2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                                onClick={() => handleDeleteTask(task.id)}
+                                              >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <h4 className="font-medium text-base text-foreground mb-1.5">
+                                        {task.title}
+                                      </h4>
+                                      <p className="text-sm text-muted-foreground mb-4">
+                                        {task.description}
+                                      </p>
+                                      <div className="flex flex-wrap gap-2 mb-4">
+                                        {task.tags.map((tag) => (
+                                          <span
+                                            key={tag}
+                                            className="inline-block rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
+                                          >
+                                            {tag}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <div className="flex items-center justify-between pt-4 border-t border-border mt-auto">
+                                        <div className="flex items-center gap-3">
+                                          <Avatar className="size-8 rounded-md">
+                                            <AvatarFallback
+                                              className={`hr-avatar text-xs ${toneClass(task.assignedToTone)}`}
+                                            >
+                                              {task.assignedToInitials}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-foreground leading-none">
+                                              {task.assignedTo}
+                                            </span>
+                                            <span className="text-[11px] text-muted-foreground mt-1">
+                                              {designation}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                          <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+                                            Due Date
+                                          </span>
+                                          <span className="text-xs font-medium text-foreground">
+                                            {task.dueDate}
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">
-                                        Due Date
-                                      </span>
-                                      <span className="text-xs font-medium text-foreground">
-                                        {task.dueDate}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
 
-                                {index < filtered.length - 1 && (
-                                  <div className="flex flex-col items-center justify-center py-2 text-border">
-                                    <div className="w-px h-4 bg-border"></div>
-                                    <ArrowDown className="h-4 w-4 text-muted-foreground/50" />
-                                    <div className="w-px h-4 bg-border"></div>
+                                    {index < filtered.length - 1 && (
+                                      <div className="flex flex-col items-center justify-center py-2 text-border">
+                                        <div className="w-px h-4 bg-border"></div>
+                                        <ArrowDown className="h-4 w-4 text-muted-foreground/50" />
+                                        <div className="w-px h-4 bg-border"></div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </div>
-            </div>
-          </DragDropContext>
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                </div>
+              </DragDropContext>
 
-          {filtered.length === 0 && (
-            <div className="py-12">
-              <EmptyState
-                icon={CheckSquare}
-                title="No tasks found"
-                subtitle="Adjust your filters."
-              />
-            </div>
+              {filtered.length === 0 && (
+                <div className="py-12">
+                  <EmptyState
+                    icon={CheckSquare}
+                    title="No tasks found"
+                    subtitle="Adjust your filters."
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
         {/* Task Form Modal */}
@@ -464,7 +523,7 @@ export default function Tasks() {
                   <SelectContent>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name}
+                        {emp.first_name} {emp.last_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
