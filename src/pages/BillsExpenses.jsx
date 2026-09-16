@@ -164,13 +164,18 @@ export default function BillsExpenses() {
 
   // Derived state
   const mappedExpenses = useMemo(() => {
+    const categoryMap = new Map();
+    for (let i = 0; i < categories.length; i++) {
+      categoryMap.set(categories[i].id, categories[i].name);
+    }
+
     return expenses.map((e) => {
       const emp = e.employees;
       const name = emp ? `${emp.first_name} ${emp.last_name}` : "Unknown";
       const initials = emp
         ? `${emp.first_name[0] || ""}${emp.last_name[0] || ""}`.toUpperCase()
         : "?";
-      const catName = categories.find((c) => c.id === e.category_id)?.name || "Unknown";
+      const catName = categoryMap.get(e.category_id) || "Unknown";
       const isOwn = emp?.user_id === user?.id;
 
       let isActionableByMe = false;
