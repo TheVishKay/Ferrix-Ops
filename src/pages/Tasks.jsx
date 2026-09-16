@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { CheckSquare, Search } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
 
 import { tasks, taskStatuses, taskPriorities } from "@/data/mockData";
 import { EmptyState } from "@/components/shared";
+import { supabase } from "@/lib/supabase";
 
 const toneClass = (t) => `hr-tone-${t}`;
 
@@ -44,18 +46,51 @@ export default function Tasks() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [localTasks, setLocalTasks] = useState(tasks);
+
+  const onDragEnd = async (result) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
+    }
+
+    const draggedTask = localTasks.find((t) => t.id === draggableId);
+    if (!draggedTask) return;
+
+    const newStatus = destination.droppableId;
+
+    if (source.droppableId !== newStatus) {
+      // Optimistic update
+      setLocalTasks((prevTasks) =>
+        prevTasks.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t)),
+      );
+
+      try {
+        // Persist the new status using the existing task service/backend if already present.
+        // In the absence of a dedicated taskService, we interact with Supabase directly.
+        // If the 'tasks' table doesn't exist yet (as it's a deferred feature), this will gracefully fail
+        // without breaking the UI, but handles persistence where the backend table is present.
+        await supabase.from("tasks").update({ status: newStatus }).eq("id", draggableId);
+      } catch (error) {
+        console.error("Failed to persist task status update:", error);
+      }
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return tasks.filter((t) => {
+    return localTasks.filter((t) => {
       const matchSearch = !q || `${t.title} ${t.assignedTo}`.toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || t.status === statusFilter;
       const matchPriority = priorityFilter === "all" || t.priority === priorityFilter;
       return matchSearch && matchStatus && matchPriority;
     });
-  }, [search, statusFilter, priorityFilter]);
+  }, [search, statusFilter, priorityFilter, localTasks]);
 
-  const countByStatus = (s) => tasks.filter((t) => t.status === s).length;
+  const countByStatus = (s) => localTasks.filter((t) => t.status === s).length;
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -151,76 +186,114 @@ export default function Tasks() {
             </Button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="hr-table min-w-[860px]">
-            <thead>
-              <tr>
-                <th>Task</th>
-                <th>ID</th>
-                <th>Assigned To</th>
-                <th>Priority</th>
-                <th>Due Date</th>
-                <th>Tags</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((task) => (
-                <tr key={task.id}>
-                  <td>
-                    <div>
-                      <p className="font-medium text-foreground">{task.title}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">
-                        {task.description}
-                      </p>
+        <div className="overflow-x-auto p-5">
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex gap-4 min-w-[860px] pb-4">
+              {taskStatuses.map((status) => {
+                const columnTasks = filtered.filter((t) => t.status === status);
+                return (
+                  <div
+                    key={status}
+                    className="flex flex-col flex-1 min-w-[280px] bg-muted/30 rounded-xl p-3 border border-border"
+                  >
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <h3 className="font-display text-sm font-semibold text-foreground">
+                        {statusLabel[status]}
+                      </h3>
+                      <span className="flex items-center justify-center bg-muted text-muted-foreground text-[10px] font-bold rounded-full size-5">
+                        {columnTasks.length}
+                      </span>
                     </div>
-                  </td>
-                  <td className="font-mono text-xs text-muted-foreground">{task.id}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="size-7 rounded-lg">
-                        <AvatarFallback
-                          className={`hr-avatar text-[10px] ${toneClass(task.assignedToTone)}`}
+                    <Droppable droppableId={status}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`flex-1 flex flex-col gap-3 min-h-[150px] transition-colors rounded-lg ${
+                            snapshot.isDraggingOver ? "bg-muted/50" : ""
+                          }`}
                         >
-                          {task.assignedToInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{task.assignedTo}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <Badge
-                      className={`hr-status-badge ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
-                    >
-                      <span className="hr-mini-dot" /> {task.priority}
-                    </Badge>
-                  </td>
-                  <td className="text-xs">{task.dueDate}</td>
-                  <td>
-                    <div className="flex flex-wrap gap-1">
-                      {task.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-block rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <Badge
-                      className={`hr-status-badge ${toneClass(statusToneMap[task.status] ?? "cyan")}`}
-                    >
-                      <span className="hr-mini-dot" /> {statusLabel[task.status]}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                          {columnTasks.map((task, index) => (
+                            <Draggable key={task.id} draggableId={task.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`hr-card p-4 text-left transition-shadow ${
+                                    snapshot.isDragging
+                                      ? "shadow-lg ring-1 ring-primary/20"
+                                      : "shadow-sm hover:shadow-md"
+                                  }`}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between mb-2">
+                                    <Badge
+                                      className={`hr-status-badge ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
+                                    >
+                                      <span className="hr-mini-dot" /> {task.priority}
+                                    </Badge>
+                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                      {task.id}
+                                    </span>
+                                  </div>
+                                  <h4 className="font-medium text-sm text-foreground mb-1 line-clamp-2">
+                                    {task.title}
+                                  </h4>
+                                  <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2">
+                                    {task.description}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {task.tags.map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="inline-block rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div className="flex items-center justify-between pt-3 border-t border-border mt-auto">
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="size-6 rounded-md">
+                                        <AvatarFallback
+                                          className={`hr-avatar text-[9px] ${toneClass(task.assignedToTone)}`}
+                                        >
+                                          {task.assignedToInitials}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-[11px] font-medium text-foreground">
+                                        {task.assignedTo}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {task.dueDate}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                );
+              })}
+            </div>
+          </DragDropContext>
+
           {filtered.length === 0 && (
-            <EmptyState icon={CheckSquare} title="No tasks found" subtitle="Adjust your filters." />
+            <div className="py-12">
+              <EmptyState
+                icon={CheckSquare}
+                title="No tasks found"
+                subtitle="Adjust your filters."
+              />
+            </div>
           )}
         </div>
       </section>
