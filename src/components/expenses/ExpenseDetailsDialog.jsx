@@ -10,7 +10,13 @@ export default function ExpenseDetailsDialog({ isOpen, onClose, expense, categor
   const [loadingPayment, setLoadingPayment] = useState(false);
 
   const categoryMap = useMemo(() => {
-    return new Map(categories?.map((c) => [c.id, c.name]) || []);
+    const map = new Map();
+    if (categories) {
+      for (const cat of categories) {
+        map.set(cat.id, cat);
+      }
+    }
+    return map;
   }, [categories]);
 
   useEffect(() => {
@@ -40,7 +46,7 @@ export default function ExpenseDetailsDialog({ isOpen, onClose, expense, categor
 
   if (!isOpen || !expense) return null;
 
-  const categoryName = categoryMap.get(expense.category_id) || "Unknown";
+  const categoryName = categoryMap.get(expense.category_id)?.name || "Unknown";
 
   const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
   const dt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
