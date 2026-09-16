@@ -1,13 +1,36 @@
 import { createClient } from "@supabase/supabase-js";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const getCorsHeaders = (req: Request) => {
+  const allowedOriginsStr = Deno.env.get("ALLOWED_ORIGINS") || "";
+  const allowedOrigins = allowedOriginsStr
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const origin = req.headers.get("Origin");
+
+  let allowedOrigin = "";
+  if (allowedOrigins.includes("*")) {
+    allowedOrigin = "*";
+  } else if (origin && allowedOrigins.includes(origin)) {
+    allowedOrigin = origin;
+  } else if (allowedOrigins.length > 0) {
+    allowedOrigin = allowedOrigins[0]; // Fallback to the first allowed origin
+  }
+
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+
+  if (allowedOrigin) {
+    headers["Access-Control-Allow-Origin"] = allowedOrigin;
+  }
+
+  return headers;
 };
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -15,7 +38,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -37,7 +60,7 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -53,7 +76,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Forbidden: Only OWNER can provision employees" }),
         {
           status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         },
       );
     }
@@ -80,13 +103,13 @@ Deno.serve(async (req: Request) => {
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return new Response(JSON.stringify({ error: "A valid email is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     if (!password || typeof password !== "string" || password.length < 6) {
       return new Response(
         JSON.stringify({ error: "Password must be at least 6 characters long" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
       );
     }
     if (
@@ -99,13 +122,13 @@ Deno.serve(async (req: Request) => {
     ) {
       return new Response(JSON.stringify({ error: "Missing required core employee fields" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     if (!date_of_birth || !personal_phone || !personal_email || !address || !emergency_contact) {
       return new Response(
         JSON.stringify({ error: "Missing required personal information fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } },
       );
     }
 
@@ -172,7 +195,7 @@ Deno.serve(async (req: Request) => {
       });
 
       return new Response(JSON.stringify({ success: true, employee_id: employeeId }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     } catch (innerError) {
       // 6. Compensating Rollback
@@ -216,7 +239,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ error: "Provisioning failed during record creation." }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         },
       );
     }
@@ -224,7 +247,7 @@ Deno.serve(async (req: Request) => {
     console.error("Create Employee Edge Function Error:", error);
     return new Response(JSON.stringify({ error: "Internal Server Error" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });

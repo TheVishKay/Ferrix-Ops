@@ -1,13 +1,36 @@
 import { createClient } from "@supabase/supabase-js";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const getCorsHeaders = (req: Request) => {
+  const allowedOriginsStr = Deno.env.get("ALLOWED_ORIGINS") || "";
+  const allowedOrigins = allowedOriginsStr
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const origin = req.headers.get("Origin");
+
+  let allowedOrigin = "";
+  if (allowedOrigins.includes("*")) {
+    allowedOrigin = "*";
+  } else if (origin && allowedOrigins.includes(origin)) {
+    allowedOrigin = origin;
+  } else if (allowedOrigins.length > 0) {
+    allowedOrigin = allowedOrigins[0]; // Fallback to the first allowed origin
+  }
+
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+
+  if (allowedOrigin) {
+    headers["Access-Control-Allow-Origin"] = allowedOrigin;
+  }
+
+  return headers;
 };
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -15,7 +38,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -37,7 +60,7 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -51,7 +74,7 @@ Deno.serve(async (req: Request) => {
     if (profileError || profile?.role !== "OWNER") {
       return new Response(JSON.stringify({ error: "Forbidden: Only OWNER can update status" }), {
         status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -60,7 +83,7 @@ Deno.serve(async (req: Request) => {
     if (!employee_id || !new_status) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -68,7 +91,7 @@ Deno.serve(async (req: Request) => {
     if (!["ACTIVE", "INACTIVE", "EXITED"].includes(new_status)) {
       return new Response(JSON.stringify({ error: "Invalid employment status" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -82,7 +105,7 @@ Deno.serve(async (req: Request) => {
     if (targetError || !targetEmployee) {
       return new Response(JSON.stringify({ error: "Target employee not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -135,13 +158,13 @@ Deno.serve(async (req: Request) => {
     });
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("Update Employee Status Edge Function Error:", error);
     return new Response(JSON.stringify({ error: "Internal Server Error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 });
