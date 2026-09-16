@@ -21,6 +21,7 @@
 ## 3. Module-by-Module Audit
 
 ### 1. EMPLOYEE MANAGEMENT
+
 - **Current Status:** Mostly functional but lacks a key UI feature.
 - **Working Functionality:** Employee creation (via Edge Function), role/status changes (via Edge Function/RPC), core details update.
 - **Security Concerns:** Safe. Uses Edge functions and RLS correctly.
@@ -29,6 +30,7 @@
 - **Recommended Fixes:** Add a "Personal Info" tab/section in the Employee details modal (`EmployeeActionsMenu.jsx`) to fetch and display this data for `OWNER`s.
 
 ### 2. ATTENDANCE MANAGEMENT
+
 - **Current Status:** Functional.
 - **Working Functionality:** Check-in/out, correction requests, status displays.
 - **Broken/Incomplete:**
@@ -39,60 +41,70 @@
 - **Recommended Fixes:** Implement a basic notification table/system for correction outcomes.
 
 ### 3. BILLS AND EXPENSES
+
 - **Current Status:** Functional with strong workflows.
 - **Working Functionality:** Expense creation, status transitions, review dialogs.
-- **Broken/Incomplete:** Confirmed that *only* `EMPLOYEE` role can submit expenses from the UI (`{profile?.role === ROLES.EMPLOYEE && <Button>New Expense</Button>}`). `OWNER` and `ACCOUNTS` cannot submit their own expenses.
+- **Broken/Incomplete:** Confirmed that _only_ `EMPLOYEE` role can submit expenses from the UI (`{profile?.role === ROLES.EMPLOYEE && <Button>New Expense</Button>}`). `OWNER` and `ACCOUNTS` cannot submit their own expenses.
 - **Security Concerns:** RLS correctly prevents invalid state transitions.
 - **Relevant Files:** `src/pages/BillsExpenses.jsx`, `src/components/expenses/ExpenseFormDialog.jsx`.
 - **Recommended Fixes:** Update frontend condition to allow all roles to submit expenses if business rules dictate.
 
 ### 4. LEAVE MANAGEMENT
+
 - **Current Status:** Implemented locally, but production status is unknown.
 - **Working Functionality:** Complete CRUD in UI and backend (RPCs, RLS).
-- **Security Concerns:** Safe *if* the migration is applied.
+- **Security Concerns:** Safe _if_ the migration is applied.
 - **Broken/Incomplete:** Cannot verify if `20260913000001_leave_management.sql` is applied to the production database.
 - **Relevant Files:** `src/pages/LeaveManagement.jsx`, `src/services/leaveService.js`, `supabase/migrations/20260913000001_leave_management.sql`.
 - **Recommended Fixes:** Verify deployment status.
 
 ### 5. TASK MANAGEMENT
+
 - **Current Status:** Mock functionality only.
 - **Working Functionality:** None.
 - **Relevant Files:** `src/pages/Tasks.jsx`, `src/data/mockData.js`.
 - **Recommended Fixes:** Hide or mark clearly as "Coming Soon" for production.
 
 ### 6. REPORTS
+
 - **Current Status:** Placeholders.
 - **Broken/Incomplete:** "Leave Reports linking to itself" is **Confirmed** (`to: "/reports"`). Displayed numbers are hardcoded.
 - **Relevant Files:** `src/pages/Reports.jsx`.
 - **Recommended Fixes:** Fix the link to point to `/leave` or disable the card. Implement real queries for the counts.
 
 ### 7. NOTIFICATIONS
+
 - **Current Status:** Mockup / Placeholder.
 - **Working Functionality:** None.
 - **Relevant Files:** `src/pages/Notifications.jsx`.
 - **Recommended Fixes:** Implement a real notification system.
 
 ### 8. SETTINGS
+
 - **Current Status:** Mockup.
 - **Working Functionality:** None. UI toggles use local state only.
 - **Relevant Files:** `src/pages/Settings.jsx`.
 - **Recommended Fixes:** Either implement user preferences in the database or disable the page.
 
 ## 4. Critical Shipping Blockers
+
 1. **Owner Visibility of Emergency Contacts:** The UI must expose `employee_personal_info` to `OWNER`s for emergency situations.
 2. **Leave Management Verification:** Need to verify if the leave migration is applied; otherwise, the UI will break when users click it.
 3. **Mock UI Elements:** The Settings and Reports pages need to be functional or disabled to prevent user confusion.
 
 ## 5. High-Priority Bugs
+
 - **Leave Reports Link:** In `src/pages/Reports.jsx`, Leave Reports links to `/reports` instead of `/leave`.
 - **Expense Submission:** Only `EMPLOYEE`s can submit expenses. Needs clarification if `OWNER`/`ACCOUNTS` should also submit.
 - **Navbar Search:** The search input in `src/components/layout/Header.jsx` is purely cosmetic and non-functional.
 
 ## 6. Medium-Priority Improvements
+
 - Add notifications for attendance correction outcomes.
 - Hook up the Reports page metrics to actual database queries.
 
 ## 7. Low-Priority UI/UX Polish
+
 - Implement real functionality for the Settings page.
 
 ## 8. Security Findings
@@ -105,11 +117,13 @@
   - MIME types for documents are determined client-side, posing a minor spoofing risk (acceptable for internal V1).
 
 ## 9. Database and Supabase Findings
+
 - **Migrations:** `20260913000001_leave_management.sql` exists but is **Not verifiable from repository** as to whether it is applied.
 - **Edge Functions:** `create-employee` and `update-employee-status` exist in backend configuration but their deployment status is **Not verifiable from repository**.
 - **RLS/Storage:** `expense-documents` bucket and policies exist in code but deployment is **Not verifiable from repository**.
 
 ## 10. Recommended Fix Order
+
 - **Phase 1: Critical safety and correctness**
   - Verify database migrations and Edge Function deployments.
   - Implement OWNER view for `employee_personal_info`.
@@ -147,17 +161,20 @@
   - **Risk:** Low.
 
 ## 12. Testing Plan
+
 - **OWNER:** Verify they can view emergency contacts in the employee list. Verify they can approve/reject leaves and expenses.
 - **EMPLOYEE:** Verify they can check-in/out, submit expenses, and submit leave requests.
 - **ACCOUNTS:** Verify they can process approved expenses.
 
 ## 13. Safe Implementation Plan
+
 1. Fix the minor UI bugs (Leave Reports link, Header search).
 2. Update the Expense submission logic, verifying RLS locally first.
 3. Add the Personal Info tab for OWNERs in `EmployeeActionsMenu`.
 4. Deploy frontend changes only after confirming all migrations (especially Leave) are applied.
 
 ## 14. Final Recommendation
+
 - **Fix first:** OWNER visibility of emergency contacts, Reports link, non-functional Navbar search.
 - **Wait:** Notification system, complex settings, Task management.
 - **Require deployment approval:** Do not push code relying on the Leave Management migration until the database state is confirmed.

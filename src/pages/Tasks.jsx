@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { CheckSquare, Search } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { ArrowDown, Edit2, Trash2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +14,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
-import { tasks, taskStatuses, taskPriorities } from "@/data/mockData";
+import { tasks, taskStatuses, taskPriorities, employees } from "@/data/mockData";
 import { EmptyState } from "@/components/shared";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 const toneClass = (t) => `hr-tone-${t}`;
 
@@ -43,13 +53,81 @@ const statusLabel = {
 const priorityToneMap = { LOW: "slate", MEDIUM: "cyan", HIGH: "amber", URGENT: "coral" };
 
 export default function Tasks() {
+  const { profile } = useAuth();
+  const isOwner = profile?.role === "OWNER";
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [localTasks, setLocalTasks] = useState(tasks);
 
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    assignedToId: "",
+    priority: "MEDIUM",
+    status: "CREATED",
+    dueDate: "",
+  });
+
+  const handleOpenTaskModal = (task = null) => {
+    if (task) {
+      setEditingTask(task);
+      setTaskForm({ ...task });
+    } else {
+      setEditingTask(null);
+      setTaskForm({
+        title: "",
+        description: "",
+        assignedToId: "",
+        priority: "MEDIUM",
+        status: "CREATED",
+        dueDate: "",
+      });
+    }
+    setIsTaskModalOpen(true);
+  };
+
+  const handleSaveTask = () => {
+    if (!taskForm.title || !taskForm.assignedToId) return;
+
+    const assignedEmp = employees.find((e) => e.id === taskForm.assignedToId);
+
+    if (editingTask) {
+      setLocalTasks((prev) =>
+        prev.map((t) =>
+          t.id === editingTask.id
+            ? {
+                ...t,
+                ...taskForm,
+                assignedTo: assignedEmp?.name,
+                assignedToInitials: assignedEmp?.initials,
+                assignedToTone: assignedEmp?.tone,
+              }
+            : t,
+        ),
+      );
+    } else {
+      const newTask = {
+        ...taskForm,
+        id: `TSK-${Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(4, "0")}`,
+        assignedTo: assignedEmp?.name,
+        assignedToInitials: assignedEmp?.initials,
+        assignedToTone: assignedEmp?.tone,
+        tags: [],
+        createdOn: new Date().toISOString().split("T")[0],
+      };
+      setLocalTasks((prev) => [...prev, newTask]);
+    }
+    setIsTaskModalOpen(false);
+  };
+
   const onDragEnd = async (result) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source } = result;
 
     if (!destination) return;
 
@@ -57,27 +135,36 @@ export default function Tasks() {
       return;
     }
 
-    const draggedTask = localTasks.find((t) => t.id === draggableId);
-    if (!draggedTask) return;
+    // Since we are dragging from a filtered list, source.index and destination.index
+    // refer to the filtered array. We must find their actual indices in localTasks.
+    const draggedItem = filtered[source.index];
+    const dropTargetItem = filtered[destination.index];
 
-    const newStatus = destination.droppableId;
+    if (!draggedItem || !dropTargetItem) return;
 
-    if (source.droppableId !== newStatus) {
-      // Optimistic update
-      setLocalTasks((prevTasks) =>
-        prevTasks.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t)),
-      );
+    const sourceAbsoluteIndex = localTasks.findIndex((t) => t.id === draggedItem.id);
+    const destinationAbsoluteIndex = localTasks.findIndex((t) => t.id === dropTargetItem.id);
 
-      try {
-        // Persist the new status using the existing task service/backend if already present.
-        // In the absence of a dedicated taskService, we interact with Supabase directly.
-        // If the 'tasks' table doesn't exist yet (as it's a deferred feature), this will gracefully fail
-        // without breaking the UI, but handles persistence where the backend table is present.
-        await supabase.from("tasks").update({ status: newStatus }).eq("id", draggableId);
-      } catch (error) {
-        console.error("Failed to persist task status update:", error);
-      }
+    if (sourceAbsoluteIndex === -1 || destinationAbsoluteIndex === -1) return;
+
+    if (source.droppableId === destination.droppableId) {
+      const newTasks = Array.from(localTasks);
+
+      const [reorderedItem] = newTasks.splice(sourceAbsoluteIndex, 1);
+      newTasks.splice(destinationAbsoluteIndex, 0, reorderedItem);
+
+      setLocalTasks(newTasks);
     }
+  };
+
+  const handleDeleteTask = (taskId) => {
+    if (!isOwner) return;
+    setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
+    supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskId)
+      .catch(() => {});
   };
 
   const filtered = useMemo(() => {
@@ -181,108 +268,152 @@ export default function Tasks() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="default" size="sm">
-              + New Task
-            </Button>
+            {isOwner && (
+              <Button variant="default" size="sm" onClick={() => handleOpenTaskModal()}>
+                + New Task
+              </Button>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto p-5">
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex gap-4 min-w-[860px] pb-4">
-              {taskStatuses.map((status) => {
-                const columnTasks = filtered.filter((t) => t.status === status);
-                return (
-                  <div
-                    key={status}
-                    className="flex flex-col flex-1 min-w-[280px] bg-muted/30 rounded-xl p-3 border border-border"
-                  >
-                    <div className="flex items-center justify-between mb-3 px-1">
-                      <h3 className="font-display text-sm font-semibold text-foreground">
-                        {statusLabel[status]}
-                      </h3>
-                      <span className="flex items-center justify-center bg-muted text-muted-foreground text-[10px] font-bold rounded-full size-5">
-                        {columnTasks.length}
-                      </span>
-                    </div>
-                    <Droppable droppableId={status}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className={`flex-1 flex flex-col gap-3 min-h-[150px] transition-colors rounded-lg ${
-                            snapshot.isDraggingOver ? "bg-muted/50" : ""
-                          }`}
-                        >
-                          {columnTasks.map((task, index) => (
-                            <Draggable key={task.id} draggableId={task.id} index={index}>
-                              {(provided, snapshot) => (
+            <div className="flex flex-col items-center pb-4 max-w-3xl mx-auto">
+              <div className="flex flex-col w-full bg-muted/10 rounded-xl p-4 border border-border">
+                <Droppable droppableId="tasks-list">
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex-1 flex flex-col gap-0 min-h-[150px] transition-colors rounded-lg ${
+                        snapshot.isDraggingOver ? "bg-muted/50" : ""
+                      }`}
+                    >
+                      {filtered.map((task, index) => {
+                        const assignedEmployee = employees.find((e) => e.id === task.assignedToId);
+                        const designation = assignedEmployee
+                          ? assignedEmployee.designation
+                          : "Employee";
+                        return (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className="flex flex-col items-center w-full"
+                                style={{
+                                  ...provided.draggableProps.style,
+                                }}
+                              >
                                 <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className={`hr-card p-4 text-left transition-shadow ${
+                                  className={`hr-card p-5 text-left w-full transition-shadow relative group ${
                                     snapshot.isDragging
-                                      ? "shadow-lg ring-1 ring-primary/20"
-                                      : "shadow-sm hover:shadow-md"
+                                      ? "shadow-lg ring-2 ring-primary/30 z-50 bg-background"
+                                      : "shadow-sm hover:shadow-md bg-background"
                                   }`}
-                                  style={{
-                                    ...provided.draggableProps.style,
-                                  }}
                                 >
-                                  <div className="flex items-start justify-between mb-2">
-                                    <Badge
-                                      className={`hr-status-badge ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
-                                    >
-                                      <span className="hr-mini-dot" /> {task.priority}
-                                    </Badge>
-                                    <span className="font-mono text-[10px] text-muted-foreground">
-                                      {task.id}
-                                    </span>
+                                  <div className="flex items-start justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                      <Badge
+                                        className={`hr-status-badge ${toneClass(statusToneMap[task.status] ?? "slate")}`}
+                                      >
+                                        <span className="hr-mini-dot" /> {statusLabel[task.status]}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-[10px] border-border bg-muted/30 ${toneClass(priorityToneMap[task.priority] ?? "cyan")}`}
+                                      >
+                                        Priority: {task.priority}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono text-[11px] text-muted-foreground">
+                                        {task.id}
+                                      </span>
+                                      {isOwner && (
+                                        <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                            onClick={() => handleOpenTaskModal(task)}
+                                          >
+                                            <Edit2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleDeleteTask(task.id)}
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <h4 className="font-medium text-sm text-foreground mb-1 line-clamp-2">
+                                  <h4 className="font-medium text-base text-foreground mb-1.5">
                                     {task.title}
                                   </h4>
-                                  <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2">
+                                  <p className="text-sm text-muted-foreground mb-4">
                                     {task.description}
                                   </p>
-                                  <div className="flex flex-wrap gap-1 mb-3">
+                                  <div className="flex flex-wrap gap-2 mb-4">
                                     {task.tags.map((tag) => (
                                       <span
                                         key={tag}
-                                        className="inline-block rounded-md border border-border bg-muted/50 px-1.5 py-0.5 text-[9px] text-muted-foreground"
+                                        className="inline-block rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
                                       >
                                         {tag}
                                       </span>
                                     ))}
                                   </div>
-                                  <div className="flex items-center justify-between pt-3 border-t border-border mt-auto">
-                                    <div className="flex items-center gap-2">
-                                      <Avatar className="size-6 rounded-md">
+                                  <div className="flex items-center justify-between pt-4 border-t border-border mt-auto">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="size-8 rounded-md">
                                         <AvatarFallback
-                                          className={`hr-avatar text-[9px] ${toneClass(task.assignedToTone)}`}
+                                          className={`hr-avatar text-xs ${toneClass(task.assignedToTone)}`}
                                         >
                                           {task.assignedToInitials}
                                         </AvatarFallback>
                                       </Avatar>
-                                      <span className="text-[11px] font-medium text-foreground">
-                                        {task.assignedTo}
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-foreground leading-none">
+                                          {task.assignedTo}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground mt-1">
+                                          {designation}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">
+                                        Due Date
+                                      </span>
+                                      <span className="text-xs font-medium text-foreground">
+                                        {task.dueDate}
                                       </span>
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {task.dueDate}
-                                    </span>
                                   </div>
                                 </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </div>
-                );
-              })}
+
+                                {index < filtered.length - 1 && (
+                                  <div className="flex flex-col items-center justify-center py-2 text-border">
+                                    <div className="w-px h-4 bg-border"></div>
+                                    <ArrowDown className="h-4 w-4 text-muted-foreground/50" />
+                                    <div className="w-px h-4 bg-border"></div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
             </div>
           </DragDropContext>
 
@@ -296,6 +427,105 @@ export default function Tasks() {
             </div>
           )}
         </div>
+        {/* Task Form Modal */}
+        <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{editingTask ? "Edit Task" : "New Task"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={taskForm.title}
+                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  placeholder="Task title"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={taskForm.description}
+                  onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+                  placeholder="Task description"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Assignee</Label>
+                <Select
+                  value={taskForm.assignedToId}
+                  onValueChange={(val) => setTaskForm({ ...taskForm, assignedToId: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Priority</Label>
+                  <Select
+                    value={taskForm.priority}
+                    onValueChange={(val) => setTaskForm({ ...taskForm, priority: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {taskPriorities.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {p}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={taskForm.status}
+                    onValueChange={(val) => setTaskForm({ ...taskForm, status: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {taskStatuses.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {statusLabel[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={taskForm.dueDate}
+                  onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsTaskModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveTask}>Save</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </section>
     </main>
   );
