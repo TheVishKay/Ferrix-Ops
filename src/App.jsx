@@ -24,6 +24,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import LeaveReports from "./pages/LeaveReports";
 import EmployeeProfile from "./pages/EmployeeProfile";
+import Tasks from "./pages/Tasks";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
 import { ROLES } from "./constants/roles";
@@ -81,6 +82,17 @@ const routes = [
       subtitle: "Request and manage employee leaves",
       icon: CalendarDays,
       tone: "amber",
+    },
+    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE, ROLES.ACCOUNTS],
+  },
+  {
+    path: "/tasks",
+    element: <Tasks />,
+    header: {
+      title: "Tasks",
+      subtitle: "Manage your tasks and workflows",
+      icon: Activity,
+      tone: "violet",
     },
     allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE, ROLES.ACCOUNTS],
   },

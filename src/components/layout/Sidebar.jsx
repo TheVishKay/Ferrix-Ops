@@ -10,6 +10,7 @@ import {
   Users,
   WalletCards,
   CalendarDays,
+  CheckSquare,
   X,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ const navItems = [
     allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE, ROLES.ACCOUNTS],
   },
   { label: "Bills & Expenses", icon: WalletCards, to: "/bills" },
+  { label: "Tasks", icon: CheckSquare, to: "/tasks" },
   { label: "Reports", icon: Activity, to: "/reports", allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS] },
   { label: "Settings", icon: Settings, to: "/settings", allowedRoles: [ROLES.OWNER] },
 ];
