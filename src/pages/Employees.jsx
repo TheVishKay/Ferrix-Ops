@@ -23,7 +23,7 @@ import { DesignationManagementDialog } from "@/components/employees/DesignationM
 
 const toneClass = (t) => `hr-tone-${t}`;
 
-const getTone = (str) => {
+export const getTone = (str) => {
   const tones = ["cyan", "coral", "amber", "violet", "lime"];
   if (!str) return "cyan";
   let hash = 0;

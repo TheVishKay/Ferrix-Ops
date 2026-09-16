@@ -168,6 +168,11 @@ export default function BillsExpenses() {
   }, [categories]);
 
   const mappedExpenses = useMemo(() => {
+    const categoryMap = new Map();
+    for (let i = 0; i < categories.length; i++) {
+      categoryMap.set(categories[i].id, categories[i].name);
+    }
+
     return expenses.map((e) => {
       const emp = e.employees;
       const name = emp ? `${emp.first_name} ${emp.last_name}` : "Unknown";
