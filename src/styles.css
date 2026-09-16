@@ -299,6 +299,7 @@
 
 .hr-search,
 .hr-table-search {
+  display: flex;
   align-items: center;
   gap: 8px;
   border: 1px solid var(--hr-line);
@@ -308,11 +309,15 @@
 }
 
 .hr-search {
-  width: 250px;
+  min-width: 170px;
+  max-width: 250px;
+  flex: 1;
 }
 
 .hr-table-search {
-  width: 170px;
+  min-width: 170px;
+  max-width: 250px;
+  flex: 1;
 }
 
 .hr-notification-dot {
@@ -472,7 +477,7 @@
   }
 
   .hr-table-search {
-    width: 100%;
+    max-width: 100%;
   }
 }
 

@@ -26,10 +26,15 @@ const navItems = [
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   { label: "Attendance", icon: Clock3, to: "/attendance" },
-  { label: "Leave", icon: CalendarDays, to: "/leave", allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE] },
+  {
+    label: "Leave",
+    icon: CalendarDays,
+    to: "/leave",
+    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE, ROLES.ACCOUNTS],
+  },
   { label: "Bills & Expenses", icon: WalletCards, to: "/bills" },
   { label: "Reports", icon: Activity, to: "/reports", allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS] },
-  { label: "Settings", icon: Settings, to: "/settings" },
+  { label: "Settings", icon: Settings, to: "/settings", allowedRoles: [ROLES.OWNER] },
 ];
 
 export default function Sidebar({ mobileOpen, onClose }) {

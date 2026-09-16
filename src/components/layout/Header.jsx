@@ -60,6 +60,12 @@ export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone =
               aria-label="Search employees and bills"
               placeholder="Search employees, bills…"
               className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.target.value.trim()) {
+                  navigate(`/employees?q=${encodeURIComponent(e.target.value.trim())}`);
+                  e.target.value = "";
+                }
+              }}
             />
           </label>
 

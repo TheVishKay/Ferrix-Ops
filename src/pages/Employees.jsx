@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { MoreHorizontal, Search, Users, Loader2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -37,9 +38,18 @@ const statusTone = { ACTIVE: "lime", INACTIVE: "coral", EXITED: "amber" };
 const displayStatus = { ACTIVE: "Active", INACTIVE: "Inactive", EXITED: "Exited" };
 
 export default function Employees() {
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState(searchParams.get("q") || "");
   const [deptFilter, setDeptFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q !== null) {
+      setSearch(q);
+    }
+  }, [searchParams]);
 
   const [employeesData, setEmployeesData] = useState([]);
   const [departmentsData, setDepartmentsData] = useState([]);
@@ -173,7 +183,20 @@ export default function Employees() {
               <Search className="size-3.5 text-muted-foreground" />
               <Input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setSearchParams(
+                    (prev) => {
+                      if (e.target.value) {
+                        prev.set("q", e.target.value);
+                      } else {
+                        prev.delete("q");
+                      }
+                      return prev;
+                    },
+                    { replace: true },
+                  );
+                }}
                 aria-label="Search employees"
                 placeholder="Name, Code, email…"
                 className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
@@ -275,7 +298,15 @@ export default function Employees() {
                 </thead>
                 <tbody>
                   {filtered.map((emp) => (
-                    <tr key={emp.id}>
+                    <tr
+                      key={emp.id}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      onDoubleClick={(e) => {
+                        // Prevent navigation if clicking on an interactive element (e.g. dropdown menu)
+                        if (e.target.closest("button") || e.target.closest("[role='menu']")) return;
+                        navigate("/employees/" + emp.id);
+                      }}
+                    >
                       <td>
                         <div className="flex items-center gap-3">
                           <Avatar className="size-9 rounded-xl">

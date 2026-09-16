@@ -871,7 +871,7 @@ export default function Attendance() {
               Attendance Log
             </h2>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <label className="hr-table-search">
               <Search className="size-3.5 text-muted-foreground" />
               <Input
@@ -884,7 +884,7 @@ export default function Attendance() {
               />
             </label>
             <Select value={dept} onValueChange={setDept} disabled={loading}>
-              <SelectTrigger className="h-9 w-[155px] text-xs">
+              <SelectTrigger className="h-9 min-w-[130px] max-w-[200px] flex-1 text-xs">
                 <SelectValue placeholder="Department: All" />
               </SelectTrigger>
               <SelectContent>
@@ -897,7 +897,7 @@ export default function Attendance() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter} disabled={loading}>
-              <SelectTrigger className="h-9 w-[135px] text-xs">
+              <SelectTrigger className="h-9 min-w-[120px] max-w-[160px] flex-1 text-xs">
                 <SelectValue placeholder="Status: All" />
               </SelectTrigger>
               <SelectContent>
@@ -913,7 +913,7 @@ export default function Attendance() {
               type="date"
               value={filterDate}
               onChange={(e) => setFilterDate(e.target.value)}
-              className="h-9 w-[135px] text-xs"
+              className="h-9 min-w-[130px] max-w-[160px] flex-1 text-xs"
               disabled={loading}
               aria-label="Filter Date"
             />

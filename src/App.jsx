@@ -22,6 +22,8 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
+import LeaveReports from "./pages/LeaveReports";
+import EmployeeProfile from "./pages/EmployeeProfile";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
 import { ROLES } from "./constants/roles";
@@ -51,6 +53,17 @@ const routes = [
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   {
+    path: "/employees/:employeeId",
+    element: <EmployeeProfile />,
+    header: {
+      title: "Employee Profile",
+      subtitle: "View employee details",
+      icon: Users,
+      tone: "cyan",
+    },
+    allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS, ROLES.EMPLOYEE],
+  },
+  {
     path: "/attendance",
     element: <Attendance />,
     header: {
@@ -69,7 +82,7 @@ const routes = [
       icon: CalendarDays,
       tone: "amber",
     },
-    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE],
+    allowedRoles: [ROLES.OWNER, ROLES.EMPLOYEE, ROLES.ACCOUNTS],
   },
   {
     path: "/bills",
@@ -93,6 +106,17 @@ const routes = [
     allowedRoles: [ROLES.OWNER, ROLES.ACCOUNTS],
   },
   {
+    path: "/reports/leave",
+    element: <LeaveReports />,
+    header: {
+      title: "Leave Reports",
+      subtitle: "Analytics and leave request overview",
+      icon: CalendarDays,
+      tone: "amber",
+    },
+    allowedRoles: [ROLES.OWNER],
+  },
+  {
     path: "/settings",
     element: <Settings />,
     header: {
@@ -101,6 +125,7 @@ const routes = [
       icon: SettingsIcon,
       tone: "violet",
     },
+    allowedRoles: [ROLES.OWNER],
   },
   {
     path: "/profile",
