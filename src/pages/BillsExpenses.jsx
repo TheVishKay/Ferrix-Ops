@@ -424,7 +424,11 @@ export default function BillsExpenses() {
   };
 
   const getUniqueStatuses = () => {
-    const s = new Set(mappedExpenses.map((e) => e.status));
+    const s = new Set();
+    const len = mappedExpenses.length;
+    for (let i = 0; i < len; i++) {
+      s.add(mappedExpenses[i].status);
+    }
     return Array.from(s).sort();
   };
 
