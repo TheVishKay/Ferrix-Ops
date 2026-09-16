@@ -145,3 +145,13 @@ export const employeeService = {
     return data;
   },
 };
+
+// Added for task fetching
+export async function getEmployees() {
+  const { data, error } = await supabase.from("employees").select("*");
+  if (error) {
+    console.error("Error fetching employees:", error);
+    return { error };
+  }
+  return { data, error: null };
+}
