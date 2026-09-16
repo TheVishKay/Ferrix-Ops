@@ -1,0 +1,10 @@
+cat << 'DIFF' > patch.diff
+--- src/pages/Tasks.jsx
++++ src/pages/Tasks.jsx
+@@ -129,3 +129,3 @@
+   const onDragEnd = async (result) => {
+-    const { destination, source, draggableId } = result;
++    const { destination, source } = result;
+
+DIFF
+patch -p0 < patch.diff
