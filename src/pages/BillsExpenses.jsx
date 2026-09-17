@@ -423,14 +423,14 @@ export default function BillsExpenses() {
     }
   };
 
-  const getUniqueStatuses = () => {
+  const uniqueStatuses = useMemo(() => {
     const s = new Set();
     const len = mappedExpenses.length;
     for (let i = 0; i < len; i++) {
       s.add(mappedExpenses[i].status);
     }
     return Array.from(s).sort();
-  };
+  }, [mappedExpenses]);
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -569,7 +569,7 @@ export default function BillsExpenses() {
                 <SelectItem value="all">Status: All</SelectItem>
                 <SelectItem value="needs_action">⚠️ Needs My Action</SelectItem>
                 <div className="h-px bg-border my-1 -mx-1" role="separator" />
-                {getUniqueStatuses().map((s) => (
+                {uniqueStatuses.map((s) => (
                   <SelectItem key={s} value={s}>
                     {statusLabel[s] ?? s}
                   </SelectItem>
