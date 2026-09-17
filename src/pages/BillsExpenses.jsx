@@ -525,19 +525,17 @@ export default function BillsExpenses() {
             >
               <RefreshCw className={`size-4 ${isRefreshing ? "animate-spin" : ""}`} />
             </Button>
-            {profile?.role === ROLES.EMPLOYEE && (
-              <Button
-                size="sm"
-                className="bg-foreground text-background hover:bg-foreground/90 gap-1.5"
-                onClick={() => {
-                  setSelectedExpense(null);
-                  setActionError(null);
-                  setFormOpen(true);
-                }}
-              >
-                <Plus className="size-4" /> New Expense
-              </Button>
-            )}
+            <Button
+              size="sm"
+              className="bg-foreground text-background hover:bg-foreground/90 gap-1.5"
+              onClick={() => {
+                setSelectedExpense(null);
+                setActionError(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus className="size-4" /> New Expense
+            </Button>
             <label className="hr-table-search">
               <Search className="size-3.5 text-muted-foreground" />
               <Input
