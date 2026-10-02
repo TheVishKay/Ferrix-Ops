@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ROLES } from "@/constants/roles";
 import { useToast } from "@/components/ui/use-toast";
 import { EmptyState } from "@/components/shared";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -158,6 +159,9 @@ export default function LeaveManagement() {
   const [reviewLoadingId, setReviewLoadingId] = useState(null);
   const [reviewRemarks, setReviewRemarks] = useState({});
 
+  // Cancel confirmation dialog
+  const [cancelTargetId, setCancelTargetId] = useState(null);
+
   const fetchData = useCallback(async () => {
     if (!profile) return;
     try {
@@ -210,12 +214,12 @@ export default function LeaveManagement() {
     }
   };
 
-  const handleCancel = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this leave request?")) return;
+  const handleCancel = async () => {
+    if (!cancelTargetId) return;
     try {
       setSubmitting(true);
       setError(null);
-      await cancelPendingLeave(id);
+      await cancelPendingLeave(cancelTargetId);
       toast({ title: "Success", description: "Leave request cancelled." });
       await fetchData();
     } catch (err) {
@@ -223,6 +227,7 @@ export default function LeaveManagement() {
       setError(err.message || "Failed to cancel leave request.");
     } finally {
       setSubmitting(false);
+      setCancelTargetId(null);
     }
   };
 
@@ -498,7 +503,7 @@ export default function LeaveManagement() {
                               variant="ghost"
                               size="sm"
                               className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleCancel(r.id)}
+                              onClick={() => setCancelTargetId(r.id)}
                               disabled={submitting}
                             >
                               <X className="size-3 mr-1" /> Cancel
@@ -631,6 +636,18 @@ export default function LeaveManagement() {
           </section>
         </>
       )}
+      <ConfirmDialog
+        isOpen={!!cancelTargetId}
+        onOpenChange={(open) => {
+          if (!open) setCancelTargetId(null);
+        }}
+        title="Cancel Leave Request"
+        description="Are you sure you want to cancel this leave request? This action cannot be undone."
+        confirmText="Yes, Cancel Request"
+        cancelText="Keep Request"
+        loading={submitting}
+        onConfirm={handleCancel}
+      />
     </main>
   );
 }

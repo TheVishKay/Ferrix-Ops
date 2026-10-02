@@ -1,19 +1,14 @@
 import { useState } from "react";
-import { Lock, Save } from "lucide-react";
+import { Lock, User } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/components/ui/use-toast";
 
 function SettingsSection({ title, subtitle, index, tone = "cyan", children }) {
   return (
@@ -39,216 +34,181 @@ function FieldRow({ label, children }) {
   );
 }
 
-function ToggleRow({ label, subtitle, checked, onChange }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-1">
-      <div>
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} className="shrink-0 mt-0.5" />
-    </div>
-  );
-}
-
 export default function Settings() {
-  // Profile state
-  const [name, setName] = useState("Admin");
-  const [email, setEmail] = useState("admin@meridianworks.in");
-  const [phone, setPhone] = useState("+91 98765 00001");
-  const [role] = useState("HR Administrator");
+  const { session, profile } = useAuth();
+  const { toast } = useToast();
 
-  // Notifications state
-  const [emailNotifs, setEmailNotifs] = useState(true);
-  const [leaveAlerts, setLeaveAlerts] = useState(true);
-  const [billAlerts, setBillAlerts] = useState(true);
-  const [taskAlerts, setTaskAlerts] = useState(false);
-  const [attendanceAlerts, setAttendanceAlerts] = useState(true);
+  const displayRole = profile?.role
+    ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).toLowerCase()
+    : "Owner";
 
-  // Appearance
-  const [theme, setTheme] = useState("system");
-  const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
-  const [currency, setCurrency] = useState("INR");
+  const initials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
+    : "??";
 
-  // Saved toast state
-  const [saved, setSaved] = useState(false);
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleChangePassword = async () => {
+    if (!newPassword) {
+      toast({ title: "Error", description: "New password is required.", variant: "error" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters.",
+        variant: "error",
+      });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast({ title: "Error", description: "Passwords do not match.", variant: "error" });
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setNewPassword("");
+      setConfirmPassword("");
+      toast({ title: "Success", description: "Password updated successfully." });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update password.",
+        variant: "error",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-      {/* Profile */}
+      {/* Profile — read-only identity from auth */}
       <SettingsSection
-        title="Profile"
-        subtitle="Update your personal and contact information."
+        title="Account Identity"
+        subtitle="Your account information as configured by the system administrator."
         index="01"
         tone="cyan"
       >
         <div className="flex items-center gap-4">
           <Avatar className="size-16 rounded-2xl">
-            <AvatarFallback className="hr-avatar hr-tone-coral text-xl">AV</AvatarFallback>
+            <AvatarFallback className="hr-avatar hr-tone-coral text-xl">{initials}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="text-sm font-semibold text-foreground">Admin</p>
-            <p className="text-xs text-muted-foreground">
-              HR Administrator · Meridian Workforce Ltd.
-            </p>
-            <Button variant="outline" size="sm" className="mt-2 text-xs">
-              Change Photo
-            </Button>
+            <p className="text-sm font-semibold text-foreground">{profile?.full_name || "—"}</p>
+            <p className="text-xs text-muted-foreground">{displayRole} · Meridian Workforce Ltd.</p>
           </div>
         </div>
         <Separator />
         <div className="space-y-4">
           <FieldRow label="Full Name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              value={profile?.full_name || ""}
+              readOnly
+              className="bg-muted text-muted-foreground cursor-not-allowed"
+            />
           </FieldRow>
           <FieldRow label="Email Address">
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </FieldRow>
-          <FieldRow label="Phone">
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input
+              type="email"
+              value={session?.user?.email || ""}
+              readOnly
+              className="bg-muted text-muted-foreground cursor-not-allowed"
+            />
           </FieldRow>
           <FieldRow label="Role">
             <Input
-              value={role}
+              value={displayRole}
               readOnly
               className="bg-muted text-muted-foreground cursor-not-allowed"
             />
           </FieldRow>
         </div>
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <User className="size-3 shrink-0" />
+          To update your personal details, visit your{" "}
+          <a href="/profile" className="underline underline-offset-2 hover:text-foreground">
+            Profile page
+          </a>
+          .
+        </p>
       </SettingsSection>
 
-      {/* Notifications */}
-      <SettingsSection
-        title="Notifications"
-        subtitle="Control which alerts reach you."
-        index="02"
-        tone="amber"
-      >
-        <div className="space-y-3 divide-y divide-border">
-          <ToggleRow
-            label="Email Notifications"
-            subtitle="Receive a daily digest via email."
-            checked={emailNotifs}
-            onChange={setEmailNotifs}
-          />
-          <div className="pt-3 space-y-3">
-            <ToggleRow
-              label="Leave Request Alerts"
-              subtitle="Notify when an employee submits a leave request."
-              checked={leaveAlerts}
-              onChange={setLeaveAlerts}
-            />
-            <ToggleRow
-              label="Bill & Expense Alerts"
-              subtitle="Notify when a bill is submitted for approval."
-              checked={billAlerts}
-              onChange={setBillAlerts}
-            />
-            <ToggleRow
-              label="Task Updates"
-              subtitle="Notify on task status changes."
-              checked={taskAlerts}
-              onChange={setTaskAlerts}
-            />
-            <ToggleRow
-              label="Attendance Corrections"
-              subtitle="Notify when an attendance correction is raised."
-              checked={attendanceAlerts}
-              onChange={setAttendanceAlerts}
-            />
-          </div>
-        </div>
-      </SettingsSection>
-
-      {/* Appearance */}
-      <SettingsSection
-        title="Appearance"
-        subtitle="Customise the look and regional formatting."
-        index="03"
-        tone="violet"
-      >
-        <div className="space-y-4">
-          <FieldRow label="Theme">
-            <Select value={theme} onValueChange={setTheme}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="system">System Default</SelectItem>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldRow>
-          <FieldRow label="Date Format">
-            <Select value={dateFormat} onValueChange={setDateFormat}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (ISO)</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldRow>
-          <FieldRow label="Currency">
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INR">₹ Indian Rupee (INR)</SelectItem>
-                <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
-                <SelectItem value="EUR">€ Euro (EUR)</SelectItem>
-              </SelectContent>
-            </Select>
-          </FieldRow>
-        </div>
-      </SettingsSection>
-
-      {/* Security */}
+      {/* Security — functional password change */}
       <SettingsSection
         title="Security"
-        subtitle="Manage your password and session settings."
-        index="04"
+        subtitle="Update your account password."
+        index="02"
         tone="coral"
       >
         <div className="space-y-4">
-          <FieldRow label="Current Password">
-            <Input type="password" placeholder="••••••••" />
-          </FieldRow>
           <FieldRow label="New Password">
-            <Input type="password" placeholder="Min. 8 characters" />
+            <Input
+              type="password"
+              placeholder="Min. 8 characters"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              disabled={changingPassword}
+            />
           </FieldRow>
           <FieldRow label="Confirm Password">
-            <Input type="password" placeholder="Repeat new password" />
+            <Input
+              type="password"
+              placeholder="Repeat new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={changingPassword}
+            />
           </FieldRow>
           <div className="sm:ml-[200px]">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Lock className="size-3.5" /> Change Password
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleChangePassword}
+              disabled={changingPassword}
+            >
+              <Lock className="size-3.5" />
+              {changingPassword ? "Updating…" : "Change Password"}
             </Button>
           </div>
         </div>
       </SettingsSection>
 
-      {/* Save bar */}
-      <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-        {saved && (
-          <p className="text-sm text-green-600 dark:text-green-400 font-medium">✓ Settings saved</p>
-        )}
-        <Button variant="outline" size="sm">
-          Discard Changes
-        </Button>
-        <Button size="sm" className="gap-1.5" onClick={handleSave}>
-          <Save className="size-3.5" /> Save Settings
-        </Button>
-      </div>
+      {/* Notifications — coming soon */}
+      <SettingsSection
+        title="Notifications"
+        subtitle="Notification preferences — coming soon."
+        index="03"
+        tone="amber"
+      >
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          Notification settings will be available in a future update.
+        </p>
+      </SettingsSection>
+
+      {/* Appearance — coming soon */}
+      <SettingsSection
+        title="Appearance"
+        subtitle="Theme and regional formatting — coming soon."
+        index="04"
+        tone="violet"
+      >
+        <p className="text-sm text-muted-foreground py-4 text-center">
+          Appearance settings will be available in a future update.
+        </p>
+      </SettingsSection>
     </main>
   );
 }

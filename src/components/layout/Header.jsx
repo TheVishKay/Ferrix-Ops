@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "../../contexts/AuthContext";
+import { ROLES } from "../../constants/roles";
 
 export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone = "coral" }) {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone =
   const displayRole = profile?.role
     ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1).toLowerCase()
     : "No Role Assigned";
+
+  const isOwner = profile?.role === ROLES.OWNER;
 
   return (
     <header className="hr-header sticky top-0 z-30 border-b border-border bg-background/90 px-4 py-4 backdrop-blur-md sm:px-6 lg:px-8">
@@ -69,27 +72,35 @@ export default function Header({ onMenuOpen, title, subtitle, icon: Icon, tone =
             />
           </label>
 
-          <Button
-            variant="outline"
-            size="icon"
-            className="min-h-11 min-w-11"
-            aria-label="Settings"
-            onClick={() => navigate("/settings")}
-          >
-            <Settings className="size-4" />
-          </Button>
+          {/* Gear icon — OWNER only */}
+          {isOwner && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="min-h-11 min-w-11"
+              aria-label="Settings"
+              onClick={() => navigate("/settings")}
+            >
+              <Settings className="size-4" />
+            </Button>
+          )}
 
-          <div className="flex items-center gap-2">
+          {/* Avatar — navigates to /profile for all roles */}
+          <button
+            className="flex items-center gap-2 rounded-xl px-1 py-1 hover:bg-muted/60 transition-colors"
+            aria-label="My profile"
+            onClick={() => navigate("/profile")}
+          >
             <Avatar className="size-10 rounded-xl">
               <AvatarFallback className="hr-avatar hr-tone-coral">{initials}</AvatarFallback>
             </Avatar>
-            <div className="hidden leading-tight sm:block">
+            <div className="hidden leading-tight sm:block text-left">
               <p className="text-sm font-semibold text-foreground">
                 {profile?.full_name || "Unknown User"}
               </p>
               <p className="text-xs text-muted-foreground">{displayRole}</p>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </header>
