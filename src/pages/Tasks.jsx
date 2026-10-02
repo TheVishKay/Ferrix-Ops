@@ -672,18 +672,30 @@ export default function Tasks() {
               <div className="grid gap-2">
                 <Label>Assignee</Label>
                 <Select
-                  value={taskForm.assignedToId}
+                  value={taskForm.assignedToId || undefined}
                   onValueChange={(val) => setTaskForm({ ...taskForm, assignedToId: val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name}
-                      </SelectItem>
-                    ))}
+                    {employees
+                      .filter(
+                        (emp) =>
+                          emp.employment_status === "ACTIVE" || emp.id === taskForm.assignedToId,
+                      )
+                      .map((emp) => {
+                        const name =
+                          `${emp.first_name || ""} ${emp.last_name || ""}`.trim() ||
+                          "Unnamed Employee";
+                        const code = emp.employee_code ? ` (${emp.employee_code})` : "";
+                        return (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {name}
+                            {code}
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>
@@ -691,7 +703,7 @@ export default function Tasks() {
                 <div className="grid gap-2">
                   <Label>Priority</Label>
                   <Select
-                    value={taskForm.priority}
+                    value={taskForm.priority || undefined}
                     onValueChange={(val) => setTaskForm({ ...taskForm, priority: val })}
                   >
                     <SelectTrigger>
@@ -709,7 +721,7 @@ export default function Tasks() {
                 <div className="grid gap-2">
                   <Label>Status</Label>
                   <Select
-                    value={taskForm.status}
+                    value={taskForm.status || undefined}
                     onValueChange={(val) => setTaskForm({ ...taskForm, status: val })}
                   >
                     <SelectTrigger>
