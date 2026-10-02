@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
-import { CheckSquare, Search } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { CheckSquare, Search, ArrowDown, Edit2, Trash2, Loader2 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { ArrowDown, Edit2, Trash2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,40 +21,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
-import { taskStatuses, taskPriorities } from "@/data/mockData";
+import {
+  TASK_STATUSES,
+  TASK_PRIORITIES,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_TONE_MAP,
+  TASK_PRIORITY_TONE_MAP,
+  ALLOWED_EMPLOYEE_TRANSITIONS,
+} from "@/constants/tasks";
 import { EmptyState } from "@/components/shared";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 import * as taskService from "@/services/taskService";
 import { getEmployees } from "@/services/employeeService";
 
 const toneClass = (t) => `hr-tone-${t}`;
 
-const statusToneMap = {
-  CREATED: "slate",
-  ASSIGNED: "cyan",
-  IN_PROGRESS: "amber",
-  READY_FOR_REVIEW: "violet",
-  RETURNED: "coral",
-  COMPLETED: "lime",
-  CANCELLED: "slate",
-};
-
-const statusLabel = {
-  CREATED: "Created",
-  ASSIGNED: "Assigned",
-  IN_PROGRESS: "In Progress",
-  READY_FOR_REVIEW: "For Review",
-  RETURNED: "Returned",
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
-};
-
-const priorityToneMap = { LOW: "slate", MEDIUM: "cyan", HIGH: "amber", URGENT: "coral" };
+const statusToneMap = TASK_STATUS_TONE_MAP;
+const statusLabel = TASK_STATUS_LABELS;
+const priorityToneMap = TASK_PRIORITY_TONE_MAP;
+const taskStatuses = TASK_STATUSES;
+const taskPriorities = TASK_PRIORITIES;
 
 export default function Tasks() {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const isOwner = profile?.role === "OWNER";
 
   const [search, setSearch] = useState("");
@@ -68,6 +60,12 @@ export default function Tasks() {
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [updatingStatusTaskId, setUpdatingStatusTaskId] = useState(null);
+
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
@@ -117,31 +115,66 @@ export default function Tasks() {
   };
 
   const handleSaveTask = async () => {
-    if (!taskForm.title || !taskForm.assignedToId) return;
-
-    if (editingTask) {
-      // Optimistic update omitted for simplicity, refreshing from DB instead
-      const res = await taskService.updateTask(editingTask.id, taskForm);
-      if (res.error) {
-        alert("Failed to update task");
-        return;
-      }
-    } else {
-      const res = await taskService.createTask(taskForm);
-      if (res.error) {
-        alert("Failed to create task");
-        return;
-      }
+    if (!taskForm.title.trim()) {
+      toast({
+        title: "Validation error",
+        description: "Task title is required.",
+        variant: "destructive",
+      });
+      return;
     }
-    setIsTaskModalOpen(false);
-
-    // Refresh task list
-    setIsLoading(true);
-    const tasksRes = await taskService.getTasks();
-    if (!tasksRes.error) {
-      setLocalTasks(tasksRes.data);
+    if (!taskForm.assignedToId) {
+      toast({
+        title: "Validation error",
+        description: "Please assign the task to an employee.",
+        variant: "destructive",
+      });
+      return;
     }
-    setIsLoading(false);
+
+    setIsSubmitting(true);
+    try {
+      if (editingTask) {
+        const res = await taskService.updateTask(editingTask.id, taskForm);
+        if (res.error) {
+          toast({
+            title: "Error updating task",
+            description: res.error.message || "Failed to update task",
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Task updated",
+          description: `"${taskForm.title}" was updated successfully.`,
+        });
+      } else {
+        const res = await taskService.createTask(taskForm);
+        if (res.error) {
+          toast({
+            title: "Error creating task",
+            description: res.error.message || "Failed to create task",
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Task created",
+          description: `"${taskForm.title}" was created successfully.`,
+        });
+      }
+      setIsTaskModalOpen(false);
+
+      // Refresh task list
+      setIsLoading(true);
+      const tasksRes = await taskService.getTasks();
+      if (!tasksRes.error) {
+        setLocalTasks(tasksRes.data);
+      }
+    } finally {
+      setIsSubmitting(false);
+      setIsLoading(false);
+    }
   };
 
   const onDragEnd = async (result) => {
@@ -207,16 +240,70 @@ export default function Tasks() {
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
+  const handleDeleteClick = (task) => {
     if (!isOwner) return;
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    setTaskToDelete(task);
+    setDeleteConfirmOpen(true);
+  };
 
-    const res = await taskService.deleteTask(taskId);
-    if (res.error) {
-      alert("Failed to delete task");
-      return;
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await taskService.deleteTask(taskToDelete.id);
+      if (res.error) {
+        toast({
+          title: "Error deleting task",
+          description: res.error.message || "Failed to delete task",
+          variant: "destructive",
+        });
+        return;
+      }
+      setLocalTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+      toast({
+        title: "Task deleted",
+        description: `"${taskToDelete.title}" has been deleted.`,
+      });
+      setDeleteConfirmOpen(false);
+      setTaskToDelete(null);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to delete task",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
-    setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
+  };
+
+  const handleStatusUpdate = async (taskId, newStatus) => {
+    setUpdatingStatusTaskId(taskId);
+    try {
+      const res = await taskService.updateTaskStatus(taskId, newStatus);
+      if (res.error) {
+        toast({
+          title: "Status update failed",
+          description: res.error.message || "Unable to update task status",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Update local task status
+      setLocalTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
+      toast({
+        title: "Status updated",
+        description: `Task status changed to ${statusLabel[newStatus] || newStatus}.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingStatusTaskId(null);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -350,7 +437,12 @@ export default function Tasks() {
                           {filtered.map((task, index) => {
                             const designation = task.designationName || "Employee";
                             return (
-                              <Draggable key={task.id} draggableId={task.id} index={index}>
+                              <Draggable
+                                key={task.id}
+                                draggableId={task.id}
+                                index={index}
+                                isDragDisabled={!isOwner}
+                              >
                                 {(provided, snapshot) => (
                                   <div
                                     ref={provided.innerRef}
@@ -401,7 +493,7 @@ export default function Tasks() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                                                onClick={() => handleDeleteTask(task.id)}
+                                                onClick={() => handleDeleteClick(task)}
                                               >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                               </Button>
@@ -448,10 +540,76 @@ export default function Tasks() {
                                             Due Date
                                           </span>
                                           <span className="text-xs font-medium text-foreground">
-                                            {task.dueDate}
+                                            {task.dueDate || "—"}
                                           </span>
                                         </div>
                                       </div>
+
+                                      {/* Employee Workflow Action */}
+                                      {!isOwner && ALLOWED_EMPLOYEE_TRANSITIONS[task.status] && (
+                                        <div className="mt-3 pt-3 border-t border-dashed border-border flex items-center justify-between">
+                                          <span className="text-xs text-muted-foreground">
+                                            Action required:
+                                          </span>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={updatingStatusTaskId === task.id}
+                                            onClick={() =>
+                                              handleStatusUpdate(
+                                                task.id,
+                                                ALLOWED_EMPLOYEE_TRANSITIONS[task.status]
+                                                  .nextStatus,
+                                              )
+                                            }
+                                            className="h-7 text-xs font-medium border-primary/30 hover:bg-primary/10 hover:text-primary transition-colors"
+                                          >
+                                            {updatingStatusTaskId === task.id && (
+                                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                            )}
+                                            {ALLOWED_EMPLOYEE_TRANSITIONS[task.status].label}
+                                          </Button>
+                                        </div>
+                                      )}
+
+                                      {/* Owner Quick Review Actions for READY_FOR_REVIEW */}
+                                      {isOwner && task.status === "READY_FOR_REVIEW" && (
+                                        <div className="mt-3 pt-3 border-t border-dashed border-border flex items-center justify-between">
+                                          <span className="text-xs font-medium text-amber-500">
+                                            Review pending:
+                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              disabled={updatingStatusTaskId === task.id}
+                                              onClick={() =>
+                                                handleStatusUpdate(task.id, "RETURNED")
+                                              }
+                                              className="h-7 text-xs border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                                            >
+                                              {updatingStatusTaskId === task.id && (
+                                                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                              )}
+                                              Return
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="default"
+                                              disabled={updatingStatusTaskId === task.id}
+                                              onClick={() =>
+                                                handleStatusUpdate(task.id, "COMPLETED")
+                                              }
+                                              className="h-7 text-xs"
+                                            >
+                                              {updatingStatusTaskId === task.id && (
+                                                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                              )}
+                                              Approve & Complete
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
 
                                     {index < filtered.length - 1 && (
@@ -578,14 +736,32 @@ export default function Tasks() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsTaskModalOpen(false)}>
+              <Button
+                variant="outline"
+                disabled={isSubmitting}
+                onClick={() => setIsTaskModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSaveTask}>Save</Button>
+              <Button disabled={isSubmitting} onClick={handleSaveTask}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </section>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Task"
+        description={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
+        confirmText="Delete Task"
+        onConfirm={handleConfirmDelete}
+        loading={isDeleting}
+      />
     </main>
   );
 }

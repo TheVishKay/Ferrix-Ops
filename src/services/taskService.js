@@ -52,75 +52,80 @@ export async function getTasks() {
 }
 
 /**
- * Create a new task.
+ * Create a new task (OWNER only).
+ * Invokes public.create_task RPC which calculates position server-side and logs TASK_CREATED audit event.
  */
 export async function createTask(taskData) {
-  // Get current max position to append to the end
-  const { data: maxPositionData, error: maxError } = await supabase
-    .from("tasks")
-    .select("position")
-    .order("position", { ascending: false })
-    .limit(1);
+  const { data, error } = await supabase.rpc("create_task", {
+    p_title: taskData.title,
+    p_description: taskData.description || null,
+    p_assigned_to_id: taskData.assignedToId,
+    p_priority: taskData.priority || "MEDIUM",
+    p_status: taskData.status || "CREATED",
+    p_due_date: taskData.dueDate || null,
+  });
 
-  if (maxError) {
-    console.error("Error fetching max position:", maxError);
-    return { error: maxError };
-  }
-
-  const maxPosition = maxPositionData?.[0]?.position ?? 0;
-  const newPosition = maxPosition + 1000.0; // Spacing by 1000 for floating point
-
-  const userRes = await supabase.auth.getUser();
-  if (userRes.error) return { error: userRes.error };
-
-  const insertData = {
-    title: taskData.title,
-    description: taskData.description,
-    assigned_to_id: taskData.assignedToId,
-    priority: taskData.priority,
-    status: taskData.status,
-    due_date: taskData.dueDate || null,
-    position: newPosition,
-    created_by: userRes.data.user.id,
-  };
-
-  const { data, error } = await supabase.from("tasks").insert([insertData]).select();
   if (error) {
     console.error("Error creating task:", error);
+    return { data: null, error };
   }
-  return { data, error };
+  return { data, error: null };
 }
 
 /**
- * Update an existing task.
+ * Update an existing task (OWNER only).
+ * Invokes public.update_task RPC which validates updates and logs TASK_UPDATED audit event.
  */
 export async function updateTask(taskId, taskData) {
-  const updateData = {
-    title: taskData.title,
-    description: taskData.description,
-    assigned_to_id: taskData.assignedToId,
-    priority: taskData.priority,
-    status: taskData.status,
-    due_date: taskData.dueDate || null,
-  };
-
-  const { data, error } = await supabase.from("tasks").update(updateData).eq("id", taskId).select();
+  const { data, error } = await supabase.rpc("update_task", {
+    p_task_id: taskId,
+    p_title: taskData.title,
+    p_description: taskData.description || null,
+    p_assigned_to_id: taskData.assignedToId,
+    p_priority: taskData.priority || "MEDIUM",
+    p_status: taskData.status || "CREATED",
+    p_due_date: taskData.dueDate || null,
+  });
 
   if (error) {
     console.error("Error updating task:", error);
+    return { data: null, error };
   }
-  return { data, error };
+  return { data, error: null };
 }
 
 /**
- * Delete a task.
+ * Delete a task (OWNER only).
+ * Invokes public.delete_task RPC which removes the task and logs TASK_DELETED audit event.
  */
 export async function deleteTask(taskId) {
-  const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+  const { error } = await supabase.rpc("delete_task", {
+    p_task_id: taskId,
+  });
+
   if (error) {
     console.error("Error deleting task:", error);
+    return { error };
   }
-  return { error };
+  return { error: null };
+}
+
+/**
+ * Update task status.
+ * Invokes public.update_task_status RPC which enforces employee transition rules
+ * and logs TASK_STATUS_UPDATED audit event.
+ */
+export async function updateTaskStatus(taskId, newStatus) {
+  const { data, error } = await supabase.rpc("update_task_status", {
+    p_task_id: taskId,
+    p_new_status: newStatus,
+  });
+
+  if (error) {
+    console.error("Error updating task status:", error);
+    return { data: null, error };
+  }
+  return { data, error: null };
 }
 
 /**

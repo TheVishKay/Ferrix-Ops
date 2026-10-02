@@ -791,19 +791,9 @@ export const departments = [
 ];
 
 // -----------------------------------------------------------------------------
-// TASK STATUSES & PRIORITIES
+// TASK STATUSES & PRIORITIES (Moved to @/constants/tasks)
 // -----------------------------------------------------------------------------
-export const taskStatuses = [
-  "CREATED",
-  "ASSIGNED",
-  "IN_PROGRESS",
-  "READY_FOR_REVIEW",
-  "RETURNED",
-  "COMPLETED",
-  "CANCELLED",
-];
-
-export const taskPriorities = ["LOW", "MEDIUM", "HIGH", "URGENT"];
+export { taskStatuses, taskPriorities } from "@/constants/tasks";
 
 // -----------------------------------------------------------------------------
 // EXPENSE STATUSES
