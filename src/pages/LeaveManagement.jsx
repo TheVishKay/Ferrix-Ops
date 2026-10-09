@@ -258,72 +258,101 @@ export default function LeaveManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
-  const filteredRequests = useMemo(() => {
-    return requests.filter((r) => {
+  const { filteredRequests, pendingQueue, historyQueue } = useMemo(() => {
+    const filtered = [];
+    const pending = [];
+    const history = [];
+
+    let fStart = null;
+    let fEnd = null;
+    let fToday = null;
+
+    // Pre-calculate date boundaries outside the loop
+    if (dateFilter !== "all") {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      if (dateFilter === "today") {
+        fToday = now;
+      } else if (dateFilter === "thisWeek") {
+        const day = now.getDay();
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+        fStart = new Date(now);
+        fStart.setDate(diff);
+
+        fEnd = new Date(fStart);
+        fEnd.setDate(fEnd.getDate() + 6);
+        fEnd.setHours(23, 59, 59, 999);
+      } else if (dateFilter === "last7days") {
+        fStart = new Date(now);
+        fStart.setDate(now.getDate() - 6);
+
+        fEnd = new Date(now);
+        fEnd.setHours(23, 59, 59, 999);
+      } else if (dateFilter === "thisMonth") {
+        fStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        fEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      }
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    const isOwner = profile?.role === ROLES.OWNER;
+
+    for (let i = 0; i < requests.length; i++) {
+      const r = requests[i];
+
+      // Always populate pendingQueue based on original items (unfiltered)
+      if (r.status === "PENDING") {
+        pending.push(r);
+      }
+
+      let passesFilter = true;
+
       // 1. Status Filter
       if (statusFilter !== "all" && r.status !== statusFilter) {
-        return false;
+        passesFilter = false;
       }
 
       // 2. Date Filter
-      if (dateFilter !== "all") {
+      if (passesFilter && dateFilter !== "all") {
         const reqStart = new Date(r.start_date);
         const reqEnd = new Date(r.end_date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
 
         if (dateFilter === "today") {
-          // Check if today falls between reqStart and reqEnd inclusive
-          if (today < reqStart || today > reqEnd) return false;
-        } else if (dateFilter === "thisWeek") {
-          // Monday through Sunday
-          const day = today.getDay(); // 0 is Sunday
-          const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-          const startOfWeek = new Date(today.setDate(diff));
-          startOfWeek.setHours(0, 0, 0, 0);
-          const endOfWeek = new Date(startOfWeek);
-          endOfWeek.setDate(endOfWeek.getDate() + 6);
-          endOfWeek.setHours(23, 59, 59, 999);
-          if (reqStart > endOfWeek || reqEnd < startOfWeek) return false;
-        } else if (dateFilter === "last7days") {
-          const startOf7Days = new Date(today);
-          startOf7Days.setDate(today.getDate() - 6);
-          const endOfToday = new Date(today);
-          endOfToday.setHours(23, 59, 59, 999);
-          if (reqStart > endOfToday || reqEnd < startOf7Days) return false;
-        } else if (dateFilter === "thisMonth") {
-          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          const endOfMonth = new Date(
-            today.getFullYear(),
-            today.getMonth() + 1,
-            0,
-            23,
-            59,
-            59,
-            999,
-          );
-          if (reqStart > endOfMonth || reqEnd < startOfMonth) return false;
+          if (fToday < reqStart || fToday > reqEnd) passesFilter = false;
+        } else {
+          if (reqStart > fEnd || reqEnd < fStart) passesFilter = false;
         }
       }
 
       // 3. Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        if (profile?.role === ROLES.OWNER) {
+      if (passesFilter && q) {
+        if (isOwner) {
           const emp = r.employees;
-          if (!emp) return false;
-          const matchName = `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(q);
-          const matchCode = (emp.employee_code || "").toLowerCase().includes(q);
-          const matchEmail = (emp.email || "").toLowerCase().includes(q);
-          if (!matchName && !matchCode && !matchEmail) return false;
+          if (!emp) {
+            passesFilter = false;
+          } else {
+            const matchName = `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(q);
+            const matchCode = (emp.employee_code || "").toLowerCase().includes(q);
+            const matchEmail = (emp.email || "").toLowerCase().includes(q);
+            if (!matchName && !matchCode && !matchEmail) passesFilter = false;
+          }
         } else {
           // Employee/Accounts scope: search by reason
-          if (!(r.reason || "").toLowerCase().includes(q)) return false;
+          if (!(r.reason || "").toLowerCase().includes(q)) passesFilter = false;
         }
       }
 
-      return true;
-    });
+      // Populate filtered list and history based on filter pass
+      if (passesFilter) {
+        filtered.push(r);
+        if (r.status !== "PENDING") {
+          history.push(r);
+        }
+      }
+    }
+
+    return { filteredRequests: filtered, pendingQueue: pending, historyQueue: history };
   }, [requests, statusFilter, dateFilter, searchQuery, profile?.role]);
 
   const renderToolbar = (isOwner) => (
@@ -381,9 +410,6 @@ export default function LeaveManagement() {
   );
 
   if (!profile) return null;
-
-  const pendingQueue = requests.filter((r) => r.status === "PENDING");
-  const historyQueue = filteredRequests.filter((r) => r.status !== "PENDING");
 
   return (
     <main className="space-y-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
