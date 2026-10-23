@@ -60,7 +60,7 @@ PG_BIN="$(pg_config --bindir)" npm run test:db
 
 The runner creates a disposable cluster, loads real core/audit/task migrations and a minimal Supabase auth fixture, reproduces the old null-role reorder bypass, and tests the new fix. It checks authorization, input validation, RLS reads, transactional rollback/audit behavior and concurrent task creation/status transitions. It stops and removes the temporary cluster on completion. It never connects to your existing local or hosted database.
 
-This is focused subsystem coverage, not a test of real JWT validation, every migration, Storage, Edge Functions or all five UI workflows. CI defines separate lint/build and task-database jobs; publishing the workflow and confirming a successful GitHub run remain release steps.
+This is focused subsystem coverage, not a test of real JWT validation, every migration, Storage, Edge Functions or all five UI workflows. CI runs separate lint/build and task-database jobs on pull requests and pushes to main. See the [workflow results](https://github.com/TheVishKay/Alum_Factory_EMS/actions/workflows/ci.yml) for the current status.
 
 ## Supabase and deployment
 

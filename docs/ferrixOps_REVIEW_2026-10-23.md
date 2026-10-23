@@ -6,7 +6,7 @@ Reviewed [ferrixOps](https://github.com/TheVishKay/Alum_Factory_EMS) against the
 
 First fetched all configured remotes and their branches/tags using `git fetch --all --prune --tags`. Local `main` and freshly fetched `origin/main` both pointed to `0aa9b20f5d48a878c3fac9dbcb1a5f1a1dbf689d` (2 October 2026). Ahead/behind: **0/0**. The initial working tree was clean. No pull/merge was necessary. Fetched a newly discovered leave-performance branch; unrelated feature, security and test branches remain separate. Fetching them does not make their changes part of main.
 
-Changes from this review are local, uncommitted additions on that synchronized baseline. They have not been pushed or deployed.
+The review changes and engineering roadmap were subsequently committed and pushed to GitHub main on 23 October 2026. The first published commit is `aa049a6`; its [GitHub Actions run passed](https://github.com/TheVishKay/Alum_Factory_EMS/actions/runs/39918134399). The hosted database migration has not been deployed.
 
 ## What exists today
 
@@ -57,7 +57,7 @@ Lock lifetime and SECURITY DEFINER privilege handling were checked against the P
 
 - `scripts/test_task_database.py` builds a disposable PostgreSQL cluster and loads actual core, audit and task migrations, with minimal Supabase auth fixtures. It never connects to an existing database.
 - The suite first reproduces the pre-fix null-role bypass, then applies the hardening migration and verifies permissions, malformed inputs, RLS reads, rollback/audit atomicity, concurrent status transitions and concurrent creations.
-- `.github/workflows/ci.yml` defines lint/build and the focused PostgreSQL suite on pushes to main and pull requests. The workflow is configured locally; no GitHub Actions run has been observed yet.
+- `.github/workflows/ci.yml` defines lint/build and the focused PostgreSQL suite on pushes to main and pull requests. The published workflow has completed successfully on GitHub; see the linked run above.
 
 ## Verification and measured results
 
@@ -124,4 +124,4 @@ Use only two or three strong bullets in the resume. Keep detailed methodology in
 
 ## Limits before release
 
-The SQL fix is tested locally but **not applied to hosted Supabase**. CI is not active on GitHub until pushed. The database fixture covers the task subsystem and substitutes auth claims; it does not validate the entire migration chain, real JWT verification, Storage, Edge Functions, or production configuration. The browser smoke test did not authenticate or exercise private workflows. Existing production data, grants, deployments and business outcomes remain unverified.
+The SQL fix is tested locally but **not applied to hosted Supabase**. GitHub CI is published and its first run passed. The database fixture covers the task subsystem and substitutes auth claims; it does not validate the entire migration chain, real JWT verification, Storage, Edge Functions, or production configuration. The browser smoke test did not authenticate or exercise private workflows. Existing production data, grants, deployments and business outcomes remain unverified.
