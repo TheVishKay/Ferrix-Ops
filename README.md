@@ -1,164 +1,87 @@
-# Employee Operations Management System V1
+# ferrixOps — Secure Manufacturing Operations Platform
 
-The Employee Operations Management System V1 is a role-based internal application designed to streamline core HR and administrative workflows.
+ferrixOps is a React/Supabase internal operations application designed for a 30–50-person manufacturing workforce. Source: [ferrixOps on GitHub](https://github.com/TheVishKay/Alum_Factory_EMS).
 
-This repository implements the V1 specification, which includes:
+Five workflows are implemented in source:
 
-- Employee Management
-- Attendance Management
-- Bills / Expenses (with document attachments and multi-stage review)
-- A role-aware Dashboard
-- End-to-end security and auditability via Supabase Auth and Row Level Security (RLS)
+- Employee directory, organization structure and account provisioning/status lifecycle.
+- Server-timestamped attendance and owner-reviewed correction requests.
+- Leave submission, review and cancellation, including attendance integration.
+- Expense submission, accounts/owner review, document attachments and payment records.
+- Assigned tasks, validated status transitions, ordering and transactional audit logging.
 
-_Note: This is an internal tool. Certain advanced modules (Leave, Tasks, etc.) are intentionally deferred for future phases._
+Implementation does not establish hosted deployment or actual workforce adoption. See the [current review](docs/ferrixOps_REVIEW_2026-10-23.md) for evidence and release gaps, and the [measurable engineering roadmap](docs/ferrixOps_RESUME_ROADMAP.md) for prioritized improvements, benchmark targets and resume templates. Earlier `audit_report.md` and `ferrixOps_CURRENT_STATE_CONTEXT.md` are historical snapshots and contain superseded findings.
 
-## 1. Roles & Permissions
+## Stack and roles
 
-The system operates strictly on a three-tier role architecture.
+React 19, Vite 8, React Router, Tailwind CSS 4 and Radix UI; Supabase Auth, PostgreSQL, Storage and Deno Edge Functions. Local Supabase configuration targets PostgreSQL 17.
 
-- **OWNER**: The global administrator. Has unrestricted access to view all employees, approve/reject expenses, resolve attendance corrections, manage organizational structure (Departments/Designations), and provision new employees.
-- **ACCOUNTS**: The financial administrator. Can view all expenses, return expenses for correction to employees, and mark approved expenses as paid. Can also view the employee directory.
-- **EMPLOYEE**: The standard user. Can only view and edit their own personal information, check in/out for attendance, submit attendance corrections, and submit their own expenses.
+- **OWNER:** employee administration, approvals and task administration.
+- **ACCOUNTS:** financial review/payment and permitted directory/operational access.
+- **EMPLOYEE:** self-service attendance, leave, expenses and assigned tasks.
 
-## 2. Technology Stack
+Protected routes provide navigation controls. Database RLS, privileges and RPC role checks enforce authorization independently of the UI. Service-role credentials belong only in server-side functions.
 
-- **Frontend**: React, Vite, React Router
-- **Styling/UI**: Tailwind CSS, Radix UI (accessible primitives)
-- **Backend / Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
-- **File Storage**: Supabase Storage
-- **Serverless Compute**: Supabase Edge Functions (Deno)
+## Local setup
 
-## 3. Local Development
-
-### Prerequisites
-
-- Node.js (v20+ recommended)
-- npm (v10+ recommended)
-- Supabase CLI (if running the backend locally or deploying Edge Functions)
-
-### Setup Commands
+Use a supported Node version compatible with the pinned Vite dependency; CI selects Node 22. The existing package lock is committed.
 
 ```bash
-# Install dependencies
-npm install
-
-# Start the development server
+npm ci
+cp .env.example .env
+# Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.
 npm run dev
+```
 
-# Run ESLint to verify code quality
+The browser needs valid Supabase configuration to initialize. A publishable/anon key is a client identifier; never put a service-role key in a `VITE_` variable.
+
+```bash
 npm run lint
-
-# Create the production build
 npm run build
+npm run preview
 ```
 
-## 4. Environment Variables
+Pages load through React lazy imports. To inspect production chunk sizes and static dependencies:
 
-The frontend requires two non-sensitive environment variables to connect to the Supabase backend. Create a `.env` file in the root directory:
-
-```env
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+```bash
+npm run build -- --manifest
+# Inspect dist/.vite/manifest.json and its imports graph.
 ```
 
-**Note**: Server-side secrets for Edge Functions must be configured via the Supabase CLI, not in the frontend `.env`.
+## Task database regression suite
 
-## 5. Supabase Setup & Configuration
+Requires Python 3 and local PostgreSQL binaries, including `initdb`, `pg_ctl`, `psql` and the `pgcrypto` extension. Run as a normal user, not root.
 
-To set up the V1 backend infrastructure, you must configure a Supabase project:
+```bash
+npm run test:db
+# For PostgreSQL outside the default macOS installation:
+PG_BIN="$(pg_config --bindir)" npm run test:db
+```
 
-1. **Create the Project**: Create a new Supabase project in the Supabase Dashboard.
-2. **Apply Migrations**: The database schema, RLS policies, and Storage buckets are defined declaratively. Run all migrations in the `supabase/migrations` folder using the Supabase CLI:
-   `supabase db push` or apply them manually in order.
-3. **Configure Auth**:
-   - Enable the **Email** provider.
-   - Configure your **Site URL** and **Redirect URLs** in the Supabase Auth settings to match your production domain.
-4. **Storage Requirements**: The migration creates a private bucket called `expense-documents`. RLS policies strictly control read/write access.
-5. **Edge Functions**: Deploy the serverless functions (`create-employee` and `update-employee-status`) via the Supabase CLI:
-   `supabase functions deploy`
-   You must set the required secrets for the functions to operate:
-   `supabase secrets set SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=...`
-6. **First OWNER Bootstrap**: Since only an OWNER can provision other employees, you must manually create the first `OWNER` user record directly in the database (`profiles` table) after they sign up via the Supabase Dashboard.
+The runner creates a disposable cluster, loads real core/audit/task migrations and a minimal Supabase auth fixture, reproduces the old null-role reorder bypass, and tests the new fix. It checks authorization, input validation, RLS reads, transactional rollback/audit behavior and concurrent task creation/status transitions. It stops and removes the temporary cluster on completion. It never connects to your existing local or hosted database.
 
-## 6. Database Architecture
+This is focused subsystem coverage, not a test of real JWT validation, every migration, Storage, Edge Functions or all five UI workflows. CI defines separate lint/build and task-database jobs; publishing the workflow and confirming a successful GitHub run remain release steps.
 
-The PostgreSQL schema relies on the following core tables:
+## Supabase and deployment
 
-- `profiles`: Links Supabase Auth UUIDs to application roles.
-- `employees`: Core employment data (department, designation, status, employee code).
-- `employee_personal_info`: Sensitive PII isolated for stricter access control.
-- `departments` & `designations`: Organizational taxonomy.
-- `attendance_records`: Daily check-in/check-out timestamps and status.
-- `attendance_correction_requests`: Formal requests by employees to amend historical attendance.
-- `expenses`: Financial claims submitted by employees.
-- `expense_documents`: File metadata mapping to objects in Supabase Storage.
-- `audit_logs`: Immutable ledger of sensitive system events (e.g., employee creation).
+Use the Supabase CLI for a deliberately selected local/staging project before deploying:
 
-## 7. Employee Provisioning Workflow
+1. Apply the migrations in `supabase/migrations` in order and verify their status. The latest proposed migration, `20261023000001_harden_task_ordering.sql`, is tested locally but has not been applied to hosted Supabase by this review.
+2. Configure Supabase Auth site/redirect URLs, email/password policy and signup behavior for your internal application.
+3. Bootstrap the first OWNER account through trusted administrative tooling; standard signups default to EMPLOYEE.
+4. Deploy `create-employee` and `update-employee-status` Edge Functions with their required server-side environment configuration. Keep administrative secrets out of source and client bundles.
+5. Verify the private `expense-documents` bucket and its metadata/storage policies. Downloads use signed URLs.
+6. Deploy `dist/` to the selected static host, set the two frontend environment variables and rewrite client routes to `/index.html`.
+7. Run OWNER, ACCOUNTS and EMPLOYEE acceptance/security checks in staging, then record the release commit and actual deployment evidence.
 
-The system uses a strict provisioning flow to ensure security:
+No hosting provider or live deployment has been independently verified here. Do not treat a successful frontend build as deployment validation.
 
-1. **OWNER** submits the new employee form.
-2. The `create-employee` Edge Function is invoked.
-3. The function provisions a Supabase Auth user via the Admin API.
-4. The function inserts the `profile`, `employee`, and `employee_personal_info` records.
-5. An `audit_log` entry is recorded.
-6. **Compensating Rollback**: If database insertion fails after Auth creation, the function attempts to delete the newly created Auth user to prevent orphaned accounts.
+## Current limits
 
-## 8. Expense Workflow
+- General Reports still contains hardcoded report counts and planned analytics; Leave Reports lists actual requests. Full report export/scheduling is deferred.
+- Payroll is specified but not implemented. Notifications and appearance preferences are deferred; Settings does implement account identity and password updates.
+- Owner emergency-contact visibility, missing-day attendance correction, pagination/date-window queries and cross-module integration tests need attention.
+- Provisioning uses compensating Auth rollback rather than a distributed transaction. Document MIME metadata and storage-orphan cleanup need further hardening.
+- The new ordering lock serializes create/reorder operations. Arbitrary reorder positions can still collide, and stale client conflict handling needs a defined policy.
 
-Expenses progress through strict statuses:
-
-- **DRAFT**: Employee is preparing the claim. Can upload/delete documents.
-- **PENDING_REVIEW**: Submitted for OWNER approval.
-- **RETURNED_FOR_CORRECTION**: ACCOUNTS requires the employee to fix the claim. (Employee can edit/upload documents again).
-- **REJECTED**: OWNER denied the claim. Terminal state.
-- **APPROVED**: OWNER approved the claim. Awaiting ACCOUNTS payment.
-- **PAID**: ACCOUNTS completed payment. Terminal state.
-
-Documents are strictly tied to expenses and secured via RLS to ensure only authorized users (the submitter, ACCOUNTS, and OWNER) can read them.
-
-## 9. Attendance Management
-
-- **Check-in / Check-out**: Handled via secure RPC calls (`check_in`, `check_out`) that use the server timestamp, preventing client-side spoofing.
-- **Correction Requests**: If an employee forgets to check out or needs to amend a past record, they submit a correction request.
-- **Review**: The OWNER reviews the request. If approved, the underlying `attendance_records` row is securely updated via a backend RPC.
-
-## 10. Security Architecture
-
-- **Supabase Auth**: Manages JWTs, sessions, and secure login.
-- **Row Level Security (RLS)**: Every table has strict RLS policies. The application never trusts the client.
-- **Edge Functions & RPCs**: Privileged operations (like updating another user's attendance or provisioning accounts) are restricted to backend Edge Functions or `SECURITY DEFINER` RPCs, keeping the `service_role` key safely out of the frontend.
-- **Private Storage**: `expense-documents` is a private bucket. Files are accessed via short-lived signed URLs.
-
-## 11. Deployment Requirements
-
-**Hosting Provider: TO BE FINALIZED**
-
-The application is a standard React Vite Single Page Application (SPA). To deploy it to a static host:
-
-1. Build the application using `npm run build`.
-2. The output will be generated in the `dist/` directory.
-3. **SPA Fallback Required**: You must configure your host to rewrite all unhandled routes (e.g., `/*`) to `/index.html` to support React Router client-side routing. _(Provider-specific configuration files like `vercel.json` or `_redirects` will be added once the host is finalized.)_
-4. Provide `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in your host's environment variable settings.
-
-## 12. Deferred V1 Functionality
-
-The following modules are visible in the UI for future-proofing but are intentionally **not functional** in the V1 operational release:
-
-- Tasks / Workflows
-- Leave Management
-- Notifications
-- Production KPIs & Complex Analytics
-- Payroll & Inventory ERP
-
-## 13. Known Accepted V1 Risks
-
-The following technical compromises have been audited and accepted for V1:
-
-1. **Non-atomic Auth/DB Provisioning**: Creating an Auth user and their DB records is not a true atomic distributed transaction. A runtime crash between the two steps could leave an orphaned Auth user. A compensating rollback is implemented to mitigate this.
-2. **Client-Provided MIME Metadata**: The frontend determines MIME types for uploaded documents (jpeg/png/pdf) without deep content inspection on the backend.
-3. **Orphaned Storage Objects**: If an expense document's database metadata deletion succeeds but the subsequent Storage API delete call fails due to a hard interruption, an orphaned file may remain in the bucket.
-4. **Malformed UUID Casting**: Passing a non-UUID string to a UUID route parameter triggers a safe generic error rather than an auth bypass.
-5. **Auth Ban Duration**: The default Supabase Auth ban duration of 876000h (100 years) is accepted as standard behavior for disabling access.
+The review distinguishes achieved measurements from proposed targets and provides resume wording that does not imply unmeasured adoption, latency improvements or production impact.

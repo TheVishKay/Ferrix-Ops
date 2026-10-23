@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Add audit logging for "Bill Created" (create_expense)
 -- =============================================================================
 

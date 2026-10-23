@@ -549,7 +549,7 @@ export default function Dashboard() {
           <span className="hr-footer-mark hr-tone-coral" aria-hidden="true">
             <Sparkles className="size-3" />
           </span>
-          LanternHR · Meridian Workforce Ltd.
+          ferrixOps · Manufacturing Operations
         </p>
         <p>© 2026 · System v1.0.4</p>
       </footer>

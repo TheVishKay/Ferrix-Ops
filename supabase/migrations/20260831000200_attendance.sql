@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration 002: Attendance Management
 --
 -- Modules:

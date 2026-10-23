@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration 004: Security, RLS, and Application Functions
 --
 -- Modules:

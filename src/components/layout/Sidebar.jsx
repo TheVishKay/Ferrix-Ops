@@ -85,7 +85,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
             </div>
             <div className="min-w-0 leading-tight">
               <p className="font-display truncate text-lg font-black tracking-tight text-sidebar-foreground">
-                LanternHR
+                ferrixOps
               </p>
               <p className="mt-0.5 text-[10px] uppercase tracking-[0.22em] text-sidebar-foreground/60">
                 Ops Console

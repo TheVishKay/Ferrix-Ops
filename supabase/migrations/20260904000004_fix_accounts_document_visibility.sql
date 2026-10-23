@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Fix Accounts Document Visibility
 --
 -- This migration fixes an information disclosure vulnerability where ACCOUNTS

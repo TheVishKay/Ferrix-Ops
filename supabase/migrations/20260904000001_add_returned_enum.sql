@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Add RETURNED_FOR_CORRECTION Enum
 --
 -- This is in its own file because PostgreSQL prevents using newly added

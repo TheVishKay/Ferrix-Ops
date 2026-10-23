@@ -1,16 +1,16 @@
-# EMS Current-State Context & Owner-Review Handoff Document
+# ferrixOps Current-State Context & Owner-Review Handoff Document
 
-**Project:** LanternHR / Aluminium Factory Employee Operations Management System (EMS)  
-**Corpus / Repository:** `TheVishKay/Alum_Factory_EMS` (`employee-operations-management-system`)  
-**Active Git Branch:** `feature/payroll-module`  
-**Audit Date:** September 17, 2026  
+**Project:** ferrixOps
+**Corpus / Repository:** [ferrixOps](https://github.com/TheVishKay/Alum_Factory_EMS) (`ferrixops`)
+**Active Git Branch:** `feature/payroll-module`
+**Audit Date:** September 17, 2026
 **Audit Mode:** Deep Read-Only Static Repository Audit (Zero Mutations, No Database Reset, No Docker/Supabase Startup)
 
 ---
 
 ## 1. Executive Summary
 
-This document provides a factual, evidence-based current-state analysis of the **LanternHR / Aluminium Factory Employee Operations Management System (EMS)** repository.
+This document provides a factual, evidence-based current-state analysis of the **ferrixOps** repository.
 
 The application is an internal, role-based operations console designed for an aluminium manufacturing facility employing approximately 40–50 staff members (directors, plant supervisors, accountants, engineers, and administrative staff). It is built with **React 19**, **Vite 8**, **Tailwind CSS v4**, and **Supabase (PostgreSQL 15+)** leveraging Supabase Auth, Row-Level Security (RLS), and `SECURITY DEFINER` Remote Procedure Calls (RPCs).
 
@@ -28,7 +28,7 @@ The application is an internal, role-based operations console designed for an al
 
 3. **Mocked & Placeholder Modules:**
    - **Reports (`/reports`):** Entirely cosmetic. Displays hardcoded category counts (`3`, `5`, `4`, `6`, `2`) and simply links to other pages. No report generation, filtering, or PDF/Excel export exists.
-   - **Settings (`/settings`):** Pure prototype. Controls use local React state pre-filled with dummy data ("Admin", "Meridian Workforce Ltd."). No database persistence exists; all toggles revert on reload.
+   - **Settings (`/settings`):** Pure prototype. Controls use local React state pre-filled with dummy data ("Admin", "ferrixOps"). No database persistence exists; all toggles revert on reload.
    - **Notifications (`src/pages/Notifications.jsx`):** A 18-line placeholder banner ("Real-time notifications are not available in V1"). It is not even registered in the application router.
 
 4. **Payroll Status:**
@@ -44,7 +44,7 @@ The application is an internal, role-based operations console designed for an al
 
 ## 2. Repository and Branch Information
 
-- **Repository Name:** `employee-operations-management-system` (GitHub: `TheVishKay/Alum_Factory_EMS`)
+- **Repository Name:** `ferrixops` (GitHub: [ferrixOps](https://github.com/TheVishKay/Alum_Factory_EMS))
 - **Current Working Git Branch:** `feature/payroll-module`
 - **Local Branch List:** `backup-before-sync`, `backup-remote-main`, `feature/payroll-module` (active), `main`
 - **Working Tree State:** Clean, with exactly **one untracked specification file**:
@@ -78,7 +78,7 @@ The application is an internal, role-based operations console designed for an al
 
 ## 3. Technology Stack
 
-| Layer              | Technology / Package               | Version    | Purpose in EMS                                 |
+| Layer              | Technology / Package               | Version    | Purpose in ferrixOps                           |
 | :----------------- | :--------------------------------- | :--------- | :--------------------------------------------- |
 | **Core Framework** | React                              | `^19.2.0`  | Declarative UI rendering                       |
 | **Runtime & DOM**  | React DOM                          | `^19.2.0`  | Browser DOM binding                            |
@@ -143,7 +143,7 @@ The application is an internal, role-based operations console designed for an al
 
 ### 5.2 Role Enforcement Mechanism
 
-The EMS enforces a three-tier role model:
+ferrixOps enforces a three-tier role model:
 
 - `OWNER`: Factory owner / managing director. Unrestricted system governance, financial approvals, employee lifecycle, and attendance correction review.
 - `ACCOUNTS`: Factory accounting department. Expense initial review, payment disbursements, employee directory inspection, and attendance monitoring.
@@ -584,13 +584,13 @@ Mockup.
 
 #### Current limitations
 
-- **Zero Persistence:** All inputs are wired to local React `useState` initialized with dummy strings (`"Admin"`, `"admin@meridianworks.in"`, `"+91 98765 00001"`).
+- **Zero Persistence:** All inputs are wired to local React `useState` initialized with dummy strings (`"Admin"`, `"admin@ferrixops.example"`, `"+91 98765 00001"`).
 - `handleSave` does not execute an API call or write to `localStorage`. Refreshing the browser resets all toggles.
 
 #### Evidence
 
 - `src/pages/Settings.jsx:56-79` (Local state declarations and dummy save timeout)
-- `src/pages/Settings.jsx:95-98` (Hardcoded "Meridian Workforce Ltd.")
+- `src/pages/Settings.jsx:95-98` (Hardcoded "ferrixOps")
 
 ---
 
@@ -709,7 +709,7 @@ The repository defines exactly **14 relational tables** and **9 custom ENUM type
 
 ### 8.1 Row-Level Security Strategy
 
-LanternHR employs a **hardened default-deny security architecture**:
+ferrixOps employs a **hardened default-deny security architecture**:
 
 1. All 14 application tables have RLS enabled (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`).
 2. High-integrity workflow tables (`attendance_records`, `attendance_correction_requests`, `expenses`, `payments`, `leave_requests`, `audit_logs`) have **zero direct INSERT, UPDATE, or DELETE policies** granted to regular users.
@@ -849,7 +849,7 @@ _Note on Function Hardening:_ Every single `SECURITY DEFINER` function in the co
 1. **Owner Personal Info Blindspot:** `EmployeeActionsMenu.jsx` only permits editing core fields. `EmployeeProfile.jsx` does not include emergency contacts. `OWNER` cannot inspect employee personal data in the UI.
 2. **Expense Submission Crash for Admin Users:** `BillsExpenses.jsx` permits Owner and Accounts to click "New Expense", but `create_expense` RPC crashes if the user does not have an active record in `public.employees`.
 3. **Ghost Notifications Route:** `src/pages/Notifications.jsx` exists in the filesystem with a placeholder UI, but is omitted from `src/App.jsx` routes and has no navigation link.
-4. **Non-Functional Settings Page:** `src/pages/Settings.jsx` presents functional-looking switches and inputs pre-filled with `"Meridian Workforce Ltd."` and `"Admin"`, but changes do not persist.
+4. **Non-Functional Settings Page:** `src/pages/Settings.jsx` presents functional-looking switches and inputs pre-filled with `"ferrixOps"` and `"Admin"`, but changes do not persist.
 5. **No Negative Attendance Correction:** If an employee missed check-in, no `attendance_records` row exists, preventing submission of a correction request via `AttendanceCorrectionModal.jsx`.
 6. **Cosmetic Search Placeholder:** Header search input promises to search bills, but only filters the employee directory.
 
@@ -857,7 +857,7 @@ _Note on Function Hardening:_ Every single `SECURITY DEFINER` function in the co
 
 ## 12. Mocked and Placeholder Features
 
-1. **`src/data/mockData.js`:** An 829-line mock data file defining fake employees, attendance, expenses, and tasks for "Meridian Workforce Ltd.". Currently, only task status/priority constants are imported; all other mock records are dead code.
+1. **`src/data/mockData.js`:** An 829-line mock data file defining fake employees, attendance, expenses, and tasks for "ferrixOps". Currently, only task status/priority constants are imported; all other mock records are dead code.
 2. **`src/pages/Reports.jsx`:** Static report category cards with hardcoded report counts (`3`, `5`, `4`, `6`, `2`).
 3. **`src/pages/Notifications.jsx`:** 18-line placeholder card.
 4. **`src/pages/Settings.jsx`:** Mock controls for notifications, profile, and theme.
@@ -888,7 +888,7 @@ graph TD
 #### Step 1: Login & Authentication
 
 - **Role to Use:** `OWNER` (e.g., `owner@factory.com`).
-- **What to Show:** Modern, clean login screen with branded LanternHR logo.
+- **What to Show:** Modern, clean login screen with branded ferrixOps logo.
 - **What Should Work:** Immediate authentication, automatic session persistence, role-aware dashboard redirect.
 
 #### Step 2: Executive Dashboard

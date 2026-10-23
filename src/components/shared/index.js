@@ -1,4 +1,4 @@
-// Shared reusable components for LanternHR pages
+// Shared reusable components for ferrixOps pages
 
 export { default as PageHeader } from "./PageHeader";
 export { default as StatCard } from "./StatCard";

@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Add Audit Logging to Operations (V1 Fix)
 -- =============================================================================
 

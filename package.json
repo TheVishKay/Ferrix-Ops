@@ -1,5 +1,5 @@
 {
-  "name": "employee-operations-management-system",
+  "name": "ferrixops",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:db": "python3 scripts/test_task_database.py"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

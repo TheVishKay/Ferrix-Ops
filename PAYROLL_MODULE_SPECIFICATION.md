@@ -1,6 +1,6 @@
-# Payroll Module Specification — Employee Operations Management System (EMS)
+# Payroll Module Specification — ferrixOps
 
-**Project:** LanternHR / Aluminium Factory EMS  
+**Project:** ferrixOps
 **Branch:** `feature/payroll-module`  
 **Target Environment:** React (Vite) + Supabase (PostgreSQL 15+)  
 **Date:** September 2026  
@@ -10,9 +10,9 @@
 
 ## 1. Executive Summary
 
-This document specifies the end-to-end architecture, database schema, security model, calculation engine, backend functions (RPCs), and frontend user experience for the **Payroll Module** of the LanternHR Employee Operations Management System (EMS).
+This document specifies the end-to-end architecture, database schema, security model, calculation engine, backend functions (RPCs), and frontend user experience for the **Payroll Module** of ferrixOps.
 
-The EMS is deployed in an **aluminium manufacturing facility** where approximately 40 educated, smartphone-equipped staff members (plant managers, production supervisors, technical engineers, accountants, sales executives, and executive directors) use the system for daily work operations. Factory payroll requires absolute mathematical accuracy, non-repudiable audit logging, strict role segregation, and seamless interoperability with the existing **Employee Management**, **Attendance Management**, **Leave Management**, and **Bills & Expenses** modules.
+ferrixOps is deployed in an **aluminium manufacturing facility** where approximately 40 educated, smartphone-equipped staff members (plant managers, production supervisors, technical engineers, accountants, sales executives, and executive directors) use the system for daily work operations. Factory payroll requires absolute mathematical accuracy, non-repudiable audit logging, strict role segregation, and seamless interoperability with the existing **Employee Management**, **Attendance Management**, **Leave Management**, and **Bills & Expenses** modules.
 
 ### Core Objectives
 
@@ -24,7 +24,7 @@ The EMS is deployed in an **aluminium manufacturing facility** where approximate
 
 ---
 
-## 2. Existing EMS Schema Findings (Phase 1 Inspection)
+## 2. Existing ferrixOps Schema Findings (Phase 1 Inspection)
 
 A thorough inspection of the repository migrations (`supabase/migrations/`) and frontend codebase reveals the following existing database objects, relationships, and operational rules:
 
@@ -559,7 +559,7 @@ CREATE INDEX idx_payslips_entry ON public.payslips(payroll_entry_id);
 
 ## 9. Row-Level Security (RLS) & Security Architecture
 
-Following LanternHR’s security pattern, RLS is enabled on all tables with a **default-deny** policy for mutations. Direct table `INSERT`, `UPDATE`, and `DELETE` queries from frontend clients are blocked. All business transitions occur exclusively through `SECURITY DEFINER` RPCs.
+Following ferrixOps’s security pattern, RLS is enabled on all tables with a **default-deny** policy for mutations. Direct table `INSERT`, `UPDATE`, and `DELETE` queries from frontend clients are blocked. All business transitions occur exclusively through `SECURITY DEFINER` RPCs.
 
 ### RLS Policies Summary
 
@@ -674,7 +674,7 @@ Every privileged operation is executed by a hardened PostgreSQL `SECURITY DEFINE
 
 ## 11. Frontend Module Specification
 
-The frontend module follows the existing React + Vite + Tailwind CSS + Radix UI architecture, adhering strictly to the **LanternHR Ops Console design system** (coral/cyan/lime/amber/violet accent tokens, sleek dark mode, and accessible primitives).
+The frontend module follows the existing React + Vite + Tailwind CSS + Radix UI architecture, adhering strictly to the **ferrixOps Ops Console design system** (coral/cyan/lime/amber/violet accent tokens, sleek dark mode, and accessible primitives).
 
 ### Navigation & Routing
 

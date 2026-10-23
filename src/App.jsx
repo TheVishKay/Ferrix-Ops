@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import {
   Activity,
@@ -12,22 +13,23 @@ import {
 import AppLayout from "./components/layout/AppLayout";
 import { Toaster } from "./components/ui/toaster";
 
-import Dashboard from "./pages/Dashboard";
-import Employees from "./pages/Employees";
-import Attendance from "./pages/Attendance";
-import LeaveManagement from "./pages/LeaveManagement";
-import BillsExpenses from "./pages/BillsExpenses";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import Profile from "./pages/Profile";
-import LeaveReports from "./pages/LeaveReports";
-import EmployeeProfile from "./pages/EmployeeProfile";
-import Tasks from "./pages/Tasks";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import RoleRoute from "./components/auth/RoleRoute";
 import { ROLES } from "./constants/roles";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Employees = lazy(() => import("./pages/Employees"));
+const Attendance = lazy(() => import("./pages/Attendance"));
+const LeaveManagement = lazy(() => import("./pages/LeaveManagement"));
+const BillsExpenses = lazy(() => import("./pages/BillsExpenses"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Login = lazy(() => import("./pages/Login"));
+const Profile = lazy(() => import("./pages/Profile"));
+const LeaveReports = lazy(() => import("./pages/LeaveReports"));
+const EmployeeProfile = lazy(() => import("./pages/EmployeeProfile"));
+const Tasks = lazy(() => import("./pages/Tasks"));
 
 // Each route entry maps a path to its page component and the header props
 // that <AppLayout> forwards to <Header>.
@@ -154,38 +156,46 @@ const routes = [
 export default function App() {
   return (
     <>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route element={<ProtectedRoute />}>
-          {routes.map(({ path, element, header, allowedRoles }) => {
-            const routeElement = allowedRoles ? (
-              <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>
-            ) : (
-              element
-            );
+      <Suspense
+        fallback={
+          <div role="status" className="flex min-h-screen items-center justify-center text-sm">
+            Loading page…
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<ProtectedRoute />}>
+            {routes.map(({ path, element, header, allowedRoles }) => {
+              const routeElement = allowedRoles ? (
+                <RoleRoute allowedRoles={allowedRoles}>{element}</RoleRoute>
+              ) : (
+                element
+              );
 
-            return (
-              <Route key={path} element={<AppLayout headerProps={header} />}>
-                <Route path={path} element={routeElement} />
-              </Route>
-            );
-          })}
-          {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
-          <Route
-            element={
-              <AppLayout
-                headerProps={{
-                  title: "Page Not Found",
-                  subtitle: "This page does not exist",
-                  tone: "coral",
-                }}
-              />
-            }
-          >
-            <Route path="*" element={<NotFound />} />
+              return (
+                <Route key={path} element={<AppLayout headerProps={header} />}>
+                  <Route path={path} element={routeElement} />
+                </Route>
+              );
+            })}
+            {/* 404 — also wrapped in AppLayout so Sidebar stays visible */}
+            <Route
+              element={
+                <AppLayout
+                  headerProps={{
+                    title: "Page Not Found",
+                    subtitle: "This page does not exist",
+                    tone: "coral",
+                  }}
+                />
+              }
+            >
+              <Route path="*" element={<NotFound />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
       <Toaster />
     </>
   );

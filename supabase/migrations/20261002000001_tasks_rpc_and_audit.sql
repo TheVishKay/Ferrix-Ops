@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Tasks RPCs and Audit Logging (Phase 1.1)
 -- =============================================================================
 

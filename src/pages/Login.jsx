@@ -44,7 +44,7 @@ export default function Login() {
             <Sparkles className="size-6 text-primary" />
           </div>
           <h1 className="mt-4 font-display text-2xl font-black tracking-tight">
-            Sign in to LanternHR
+            Sign in to ferrixOps
           </h1>
           <p className="text-sm text-muted-foreground">
             Enter your details below to access your account

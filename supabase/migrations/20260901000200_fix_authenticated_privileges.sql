@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Fix Authenticated Privileges (Phase 2A)
 --
 -- This migration fixes the table-level DML privileges required for the

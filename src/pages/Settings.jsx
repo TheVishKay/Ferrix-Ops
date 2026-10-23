@@ -107,7 +107,7 @@ export default function Settings() {
           </Avatar>
           <div>
             <p className="text-sm font-semibold text-foreground">{profile?.full_name || "—"}</p>
-            <p className="text-xs text-muted-foreground">{displayRole} · Meridian Workforce Ltd.</p>
+            <p className="text-xs text-muted-foreground">{displayRole} · ferrixOps</p>
           </div>
         </div>
         <Separator />

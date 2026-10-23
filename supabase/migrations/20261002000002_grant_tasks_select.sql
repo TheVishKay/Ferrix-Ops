@@ -1,5 +1,5 @@
 -- =============================================================================
--- EMPLOYEE OPERATIONS MANAGEMENT SYSTEM
+-- ferrixOps
 -- Migration: Grant SELECT on tasks to authenticated
 --
 -- The public.tasks table was created in migration 20260916125019_tasks.sql,
