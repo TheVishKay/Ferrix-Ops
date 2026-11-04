@@ -2,6 +2,8 @@
 
 These are proposed improvements and acceptance targets, not achieved results. Prefer a few completed, measured improvements over a larger feature list. A strong project story connects a manufacturing problem, an engineering decision, a controlled measurement and an actual operational outcome.
 
+For a step-by-step plan to produce the API-latency claim without factory deployment, see the [API benchmark roadmap](ferrixOps_API_BENCHMARK_ROADMAP.md). It defines comparable workloads, deterministic synthetic fixtures, authenticated HTTP testing, repeated measurements and the evidence required for a resume bullet.
+
 ## Existing evidence to preserve
 
 - Task creation changed from three service operations to one RPC: 67% less service-level request orchestration, excluding refresh/auth/retries.

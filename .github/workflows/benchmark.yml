@@ -1,0 +1,41 @@
+name: Expense API benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Benchmark mode (full takes about an hour)
+        type: choice
+        options: [smoke, full]
+        default: smoke
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run bench:unit
+      - name: Run smoke benchmark
+        if: inputs.mode == 'smoke'
+        run: npm run bench:smoke
+      - name: Run full benchmark
+        if: inputs.mode == 'full'
+        run: npm run bench:full
+      - name: Retain scrubbed measurement artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expense-api-benchmark-${{ github.run_id }}
+          path: benchmarks/results/
+          if-no-files-found: warn
+          retention-days: 30

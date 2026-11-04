@@ -37,3 +37,6 @@ dist-ssr
 !.env.example
 .ai/
 diff.txt
+
+# Synthetic benchmark outputs; never commit CLI status or credentials.
+benchmarks/results/

@@ -6,8 +6,12 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 
 export default [
-  { ignores: ["dist", ".output", "node_modules"] },
+  { ignores: ["dist", ".output", "node_modules", "benchmarks/results"] },
   js.configs.recommended,
+  {
+    files: ["benchmarks/**/*.mjs"],
+    languageOptions: { globals: globals.node },
+  },
   {
     files: ["**/*.{js,jsx}"],
     languageOptions: {
