@@ -1,0 +1,245 @@
+{
+  "pair": 1,
+  "variant": "candidate",
+  "correctness_checks": 49,
+  "indexes": [
+    {
+      "indexname": "bench_expenses_owner_created",
+      "indexdef": "CREATE INDEX bench_expenses_owner_created ON public.expenses USING btree (submitted_by, created_at DESC, id DESC)",
+      "bytes": "606208"
+    },
+    {
+      "indexname": "bench_expenses_status_created",
+      "indexdef": "CREATE INDEX bench_expenses_status_created ON public.expenses USING btree (status, created_at DESC, id DESC)",
+      "bytes": "516096"
+    },
+    {
+      "indexname": "expenses_expense_number_key",
+      "indexdef": "CREATE UNIQUE INDEX expenses_expense_number_key ON public.expenses USING btree (expense_number)",
+      "bytes": "565248"
+    },
+    {
+      "indexname": "expenses_pkey",
+      "indexdef": "CREATE UNIQUE INDEX expenses_pkey ON public.expenses USING btree (id)",
+      "bytes": "425984"
+    },
+    {
+      "indexname": "idx_expense_duplicate_detection",
+      "indexdef": "CREATE INDEX idx_expense_duplicate_detection ON public.expenses USING btree (submitted_by, vendor_name, amount, expense_date)",
+      "bytes": "909312"
+    },
+    {
+      "indexname": "idx_expenses_category",
+      "indexdef": "CREATE INDEX idx_expenses_category ON public.expenses USING btree (category_id)",
+      "bytes": "98304"
+    },
+    {
+      "indexname": "idx_expenses_date",
+      "indexdef": "CREATE INDEX idx_expenses_date ON public.expenses USING btree (expense_date DESC)",
+      "bytes": "106496"
+    },
+    {
+      "indexname": "idx_expenses_status",
+      "indexdef": "CREATE INDEX idx_expenses_status ON public.expenses USING btree (status)",
+      "bytes": "131072"
+    },
+    {
+      "indexname": "idx_expenses_submitted_by",
+      "indexdef": "CREATE INDEX idx_expenses_submitted_by ON public.expenses USING btree (submitted_by)",
+      "bytes": "98304"
+    }
+  ],
+  "metrics": {
+    "attempts": 25339,
+    "successes": 25339,
+    "failures": 0,
+    "p50_ms": 36.18566600000486,
+    "p95_ms": 84.00117979999047,
+    "success_p95_ms": 84.00117979999047,
+    "successful_ops_per_second": 84.3773393123869,
+    "mean_body_bytes": 24327.571648447058,
+    "by_query": {
+      "all-deep": {
+        "samples": 2816,
+        "p95_ms": 7.251187750036479
+      },
+      "paid-deep": {
+        "samples": 2815,
+        "p95_ms": 10.553104399971197
+      },
+      "submitted-window-deep": {
+        "samples": 2815,
+        "p95_ms": 11.324162500031525
+      },
+      "submitted-window-middle": {
+        "samples": 2814,
+        "p95_ms": 32.733752750005806
+      },
+      "all-middle": {
+        "samples": 2816,
+        "p95_ms": 59.85324974998366
+      },
+      "paid-middle": {
+        "samples": 2816,
+        "p95_ms": 50.69352074993367
+      },
+      "paid-first": {
+        "samples": 2815,
+        "p95_ms": 92.80486610002698
+      },
+      "all-first": {
+        "samples": 2816,
+        "p95_ms": 109.51742774997547
+      },
+      "submitted-window-first": {
+        "samples": 2816,
+        "p95_ms": 55.19379200004914
+      }
+    }
+  },
+  "runtime": {
+    "cpu_fraction": 0.12346595508659539,
+    "event_loop_p95_ms": 11.288575
+  },
+  "actual_seconds": 300.305748042,
+  "diagnostic_plan": [
+    {
+      "QUERY PLAN": [
+        {
+          "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 5507.2,
+            "Total Cost": 5507.33,
+            "Plan Rows": 50,
+            "Plan Width": 28,
+            "Actual Startup Time": 23.142,
+            "Actual Total Time": 23.145,
+            "Actual Rows": 50,
+            "Actual Loops": 1,
+            "Shared Hit Blocks": 10228,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 5507.2,
+                "Total Cost": 5509.01,
+                "Plan Rows": 721,
+                "Plan Width": 28,
+                "Actual Startup Time": 23.141,
+                "Actual Total Time": 23.142,
+                "Actual Rows": 50,
+                "Actual Loops": 1,
+                "Sort Key": [
+                  "expenses.created_at DESC",
+                  "expenses.id DESC"
+                ],
+                "Sort Method": "top-N heapsort",
+                "Sort Space Used": 28,
+                "Sort Space Type": "Memory",
+                "Shared Hit Blocks": 10228,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Local Hit Blocks": 0,
+                "Local Read Blocks": 0,
+                "Local Dirtied Blocks": 0,
+                "Local Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Relation Name": "expenses",
+                    "Alias": "expenses",
+                    "Startup Cost": 30.25,
+                    "Total Cost": 5483.25,
+                    "Plan Rows": 721,
+                    "Plan Width": 28,
+                    "Actual Startup Time": 0.063,
+                    "Actual Total Time": 23.036,
+                    "Actual Rows": 1359,
+                    "Actual Loops": 1,
+                    "Filter": "(((get_my_role() = 'OWNER'::app_role) OR (ANY (submitted_by = (hashed SubPlan 1).col1)) OR ((get_my_role() = 'ACCOUNTS'::app_role) AND (status <> 'DRAFT'::expense_status))) AND (status = 'PAID'::expense_status))",
+                    "Rows Removed by Filter": 8641,
+                    "Shared Hit Blocks": 10228,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Local Hit Blocks": 0,
+                    "Local Read Blocks": 0,
+                    "Local Dirtied Blocks": 0,
+                    "Local Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 1",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Relation Name": "employees",
+                        "Alias": "employees",
+                        "Startup Cost": 0,
+                        "Total Cost": 30.25,
+                        "Plan Rows": 1,
+                        "Plan Width": 16,
+                        "Actual Startup Time": 0,
+                        "Actual Total Time": 0,
+                        "Actual Rows": 0,
+                        "Actual Loops": 0,
+                        "Filter": "(((get_my_role() = ANY ('{OWNER,ACCOUNTS}'::app_role[])) OR (get_my_role() = 'OWNER'::app_role) OR (user_id = (COALESCE(NULLIF(current_setting('request.jwt.claim.sub'::text, true), ''::text), ((NULLIF(current_setting('request.jwt.claims'::text, true), ''::text))::jsonb ->> 'sub'::text)))::uuid)) AND (user_id = (COALESCE(NULLIF(current_setting('request.jwt.claim.sub'::text, true), ''::text), ((NULLIF(current_setting('request.jwt.claims'::text, true), ''::text))::jsonb ->> 'sub'::text)))::uuid))",
+                        "Rows Removed by Filter": 0,
+                        "Shared Hit Blocks": 0,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Local Hit Blocks": 0,
+                        "Local Read Blocks": 0,
+                        "Local Dirtied Blocks": 0,
+                        "Local Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "Planning": {
+            "Shared Hit Blocks": 14,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Local Hit Blocks": 0,
+            "Local Read Blocks": 0,
+            "Local Dirtied Blocks": 0,
+            "Local Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0
+          },
+          "Planning Time": 0.274,
+          "Triggers": [],
+          "Execution Time": 23.162
+        }
+      ]
+    }
+  ]
+}

@@ -2,6 +2,8 @@
 
 No factory deployment, active users, hosted Supabase project or production data is required. The runner creates a **new temporary local Supabase project** for each invocation and removes that project's containers/volumes afterward. Docker Desktop must be running.
 
+The [completed five-pair study](../docs/ferrixOps_API_BENCHMARK_RESULTS.md) and [retained evidence](evidence/2026-11-04-policy-initplan/) report the observed 65.8% mixed-workload p95 reduction and the query classes that regressed.
+
 ## Commands
 
 Use Node 22+ and install the committed dependency lock:
@@ -82,3 +84,12 @@ Unit tests run with the frontend CI job. The manually dispatched **Expense API b
 - **Cleanup failure:** the runner prints only the temporary project ID/workdir. Run `npx supabase stop --no-backup --workdir <that-exact-workdir>` to stop that project. Do not use a global/all-project cleanup command.
 
 For the larger methodology and future experiments, see the [benchmark roadmap](../docs/ferrixOps_API_BENCHMARK_ROADMAP.md).
+
+## Verify retained evidence without Docker
+
+```bash
+python3 benchmarks/verify_results.py benchmarks/evidence/2026-11-04-policy-initplan/confirmatory
+node benchmarks/plot-results.mjs benchmarks/evidence/2026-11-04-policy-initplan/confirmatory
+```
+
+The independent verifier uses Python standard-library code and the recorded Git history. The static SVG charts use the existing Recharts dependency; no plotting package installation is required.

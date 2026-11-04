@@ -1,0 +1,34 @@
+{
+  "median_baseline_p95_ms": 104.89186644996515,
+  "median_candidate_p95_ms": 35.89669999964535,
+  "reduction_percent": 65.77742277398737,
+  "candidate_for_manual_review": true,
+  "reasons": [],
+  "pairs": [
+    {
+      "pair": 1,
+      "baseline_ms": 78.30394170000788,
+      "candidate_ms": 35.35732499995792
+    },
+    {
+      "pair": 2,
+      "baseline_ms": 109.06003480007638,
+      "candidate_ms": 36.79966700007208
+    },
+    {
+      "pair": 3,
+      "baseline_ms": 109.65992459999393,
+      "candidate_ms": 35.502290999982506
+    },
+    {
+      "pair": 4,
+      "baseline_ms": 104.89186644996515,
+      "candidate_ms": 35.89669999964535
+    },
+    {
+      "pair": 5,
+      "baseline_ms": 91.41562499990687,
+      "candidate_ms": 36.185049700178205
+    }
+  ]
+}

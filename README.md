@@ -64,7 +64,7 @@ This is focused subsystem coverage, not a test of real JWT validation, every mig
 
 ## Supabase and deployment
 
-For automated expense API testing without factory deployment, see the [local benchmark harness](benchmarks/README.md). Start with `npm run bench:unit` and `npm run bench:smoke`; the full repeated comparison is `npm run bench:full`. This uses isolated local Supabase services and synthetic data.
+The [completed local benchmark](docs/ferrixOps_API_BENCHMARK_RESULTS.md) measured a 65.8% mixed-workload p95 reduction with synthetic data and documents the deep-page regressions. For automated expense API testing without factory deployment, see the [local benchmark harness](benchmarks/README.md). Start with `npm run bench:unit` and `npm run bench:smoke`; the full repeated comparison is `npm run bench:full`. This uses isolated local Supabase services and synthetic data.
 
 Use the Supabase CLI for a deliberately selected local/staging project before deploying:
 

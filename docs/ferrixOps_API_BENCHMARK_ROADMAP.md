@@ -1,6 +1,6 @@
 # ferrixOps: roadmap for a defensible API-performance resume claim
 
-Status: methodology and implementation plan; no resume-grade API-latency improvement has been established.
+Status: the first complete expense-policy experiment has finished. See the [measured results and limitations](ferrixOps_API_BENCHMARK_RESULTS.md): 65.8% lower mixed-workload p95 on the declared local synthetic workload, with slower deep-page classes. This roadmap also covers future experiments that have not been implemented.
 
 The initial expense-only automation is now implemented in [the benchmark harness](../benchmarks/README.md). It uses Node HTTP requests and a monotonic clock rather than the originally proposed k6 runner. Smoke mode verifies real local Auth/RLS, the full migration chain, deterministic fixtures and paired baseline/optimized policy variants. The full five-pair protocol is available separately; dashboard and multi-workflow load experiments below remain future work.
 

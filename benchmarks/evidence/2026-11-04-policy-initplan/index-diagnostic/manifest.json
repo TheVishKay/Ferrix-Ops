@@ -1,0 +1,200 @@
+{
+  "config": {
+    "mode": "full",
+    "rows": 10000,
+    "clients": 20,
+    "repeats": 5,
+    "seconds": 300,
+    "warmupSeconds": 30,
+    "thinkMs": 200,
+    "role": "OWNER",
+    "minimumSamples": 2000
+  },
+  "git": "b834566fa9fbd20375fadc187eeb7313a8fd2c02",
+  "dirty": false,
+  "fixture_sha256": "2b2b99e9c50fc425b959b0c0fd73bb14dc1011d1a1fee5ff673aff22eeecc0ce",
+  "migrations": [
+    {
+      "name": "20260831000100_core_and_employees.sql",
+      "sha256": "f6c4fd1451fad7f7a005a094175f968a353d92bf1d1c86df7be0918e8512baf5"
+    },
+    {
+      "name": "20260831000200_attendance.sql",
+      "sha256": "3573b218e21220167d7b4b4bf6f1d2e8e4f548155e4703df02615acb07ccddef"
+    },
+    {
+      "name": "20260831000300_expenses_and_payments.sql",
+      "sha256": "f67b86ab02deef1026cd0c7ebd5e71326771dee27f6761fa178b8e892fd0787e"
+    },
+    {
+      "name": "20260831000400_security_and_functions.sql",
+      "sha256": "dffa1e6fa9733eb04ef72154c5bf4e0a25484f1bf9e5c4edc1e75c1116879f4d"
+    },
+    {
+      "name": "20260901000100_fix_profiles_grants.sql",
+      "sha256": "6aa77078b0a92a9654c0c5148c4d4013e91b19f143aebf41e9793daf0acb0a66"
+    },
+    {
+      "name": "20260901000200_fix_authenticated_privileges.sql",
+      "sha256": "041596745a8ead7a5814700d07d29899befff817fdeb014fb258f24ba3166ea7"
+    },
+    {
+      "name": "20260904000001_add_returned_enum.sql",
+      "sha256": "ebad647673bd4b3a4ca950670cfa1a7160b99e9f369cf0c28d29feeec2aecb64"
+    },
+    {
+      "name": "20260904000002_expense_documents_security.sql",
+      "sha256": "d91cfc0648934696af50504411d4007611d94d9073195bdb39c849ce98215fd2"
+    },
+    {
+      "name": "20260904000003_expense_workflow_rpc_updates.sql",
+      "sha256": "46b33bc13cf637877f4c3a3929fb471725fc3227651fef9cf4cda1558b1c9718"
+    },
+    {
+      "name": "20260904000004_fix_accounts_document_visibility.sql",
+      "sha256": "b6391f6b7b9655289d351ad958032099a51a5dae9c0684c5b550762503feefc6"
+    },
+    {
+      "name": "20260906000001_employee_personal_info.sql",
+      "sha256": "1de03bcc993a9d642234fe4c627dd63f3b092c1030295ded07276c97fab3ca99"
+    },
+    {
+      "name": "20260906000002_employee_management_rpc.sql",
+      "sha256": "61a05b556512aacb5d2b5669085909722c873cc84a72996ce190db1b7bbbe154"
+    },
+    {
+      "name": "20260906000003_audit_logging.sql",
+      "sha256": "85c568e98316860eb5b326f477d89606527f41addf6a75c2e4ed59cf98f8e082"
+    },
+    {
+      "name": "20260906000004_audit_operations.sql",
+      "sha256": "699e2495e7a7c249906eb3d27281430a3d151390dfdee7e8f4e855f1ca5853aa"
+    },
+    {
+      "name": "20260906000005_expense_document_mime_security.sql",
+      "sha256": "f5ea740f60ffb20a627480d250b9a35858137a686874709f0fd608590677820b"
+    },
+    {
+      "name": "20260906000006_audit_bill_created.sql",
+      "sha256": "43fb57728d2482d1fa0fe7950922761535a79c305c4fe31371caf37733ebbd7f"
+    },
+    {
+      "name": "20260906000007_audit_employee_updates.sql",
+      "sha256": "5bd8d17644ce7a692a6d8c2d5cfb4274c53c0d92fed3480011957c1509f0e144"
+    },
+    {
+      "name": "20260907000008_fix_service_role_provisioning_privileges.sql",
+      "sha256": "94de4889f56bc9e27c0ed6ebb27169da64e76028570eafa2ee1de39ba71035b7"
+    },
+    {
+      "name": "20260907000009_grant_update_service_role.sql",
+      "sha256": "2951b1f8c61ff5a83648a4ad1508c1a1b57b9741918eff96dfe4a565ac93ada8"
+    },
+    {
+      "name": "20260913000001_leave_management.sql",
+      "sha256": "85dcda8810ca6f9e966611d42be6698869619327466b3ba42699cc51d30d880d"
+    },
+    {
+      "name": "20260914000001_fix_leave_grants.sql",
+      "sha256": "d524e13bb4939038bb1c4bb59cb52e695303ab577b6dd26b4b18c99baeb132a1"
+    },
+    {
+      "name": "20260916125019_tasks.sql",
+      "sha256": "09a44591d153342142863bbbd0dbb6e990959a6439808edf4387808186a68bdf"
+    },
+    {
+      "name": "20260917000001_employee_management_rpc_permissions.sql",
+      "sha256": "3aa2e85ddaca9ea1940d8b641274946752787353c65408dd292489eaf042857d"
+    },
+    {
+      "name": "20261002000001_tasks_rpc_and_audit.sql",
+      "sha256": "85da01f8dc8ac6c175845157260b98786e02a37ecf12fcb56cdeb70c4880d17f"
+    },
+    {
+      "name": "20261002000002_grant_tasks_select.sql",
+      "sha256": "898c5cd53d75693c9f87c9a6a88d25f9bd697cee29915548818361df141e2565"
+    },
+    {
+      "name": "20261023000001_harden_task_ordering.sql",
+      "sha256": "f3d1112723bddbc2b85a11cffd4138ca32ea72c4ec3c7644f08383636ceddf72"
+    }
+  ],
+  "source": [
+    {
+      "file": "benchmarks/run.mjs",
+      "sha256": "2ab37867ecd8acbadeef0ed8ba814fadf353a871e4f1c5e0d8dcbefb1816edfe"
+    },
+    {
+      "file": "benchmarks/lib.mjs",
+      "sha256": "bb2c2f72c340520e611fcace7d0a95156c6de96518b32e42ab56bc4cd40a2268"
+    },
+    {
+      "file": "benchmarks/supabase/config.toml",
+      "sha256": "840facb897f7c86aeac1a7f8e8e8450760cc04c034019124858bc0356d19b4ff"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "716d5b1d51abf876b3fdc2f24042afbc2d364109bf0ad36de1671f659829ab89"
+    }
+  ],
+  "environment": {
+    "os": "darwin",
+    "release": "25.5.0",
+    "node": "v26.5.0",
+    "cpu": "Apple M4",
+    "logical_cpus": 10,
+    "memory_bytes": 17179869184,
+    "postgres": "17.11",
+    "supabase": "2.122.0",
+    "docker": "29.7.2",
+    "docker_resources": {
+      "cpus": 10,
+      "memory_bytes": 8319504384
+    },
+    "containers": [
+      {
+        "name": "/supabase_storage_ferrixopsbench9ec3a8b443",
+        "image": "public.ecr.aws/supabase/storage-api:v1.84.19",
+        "image_id": "sha256:a0420573837ee08c0afdc9cd01f90b4b8027579da99e0b9a159fe912ef756c99",
+        "memory_limit_bytes": 0,
+        "nano_cpus": 0
+      },
+      {
+        "name": "/supabase_rest_ferrixopsbench9ec3a8b443",
+        "image": "public.ecr.aws/supabase/postgrest:v16.5",
+        "image_id": "sha256:1347d7552b88f17832912c06afbf7c43209af6eeeb60834b04aae12c9bd9d5cc",
+        "memory_limit_bytes": 0,
+        "nano_cpus": 0
+      },
+      {
+        "name": "/supabase_auth_ferrixopsbench9ec3a8b443",
+        "image": "public.ecr.aws/supabase/gotrue:v2.197.0",
+        "image_id": "sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b",
+        "memory_limit_bytes": 0,
+        "nano_cpus": 0
+      },
+      {
+        "name": "/supabase_kong_ferrixopsbench9ec3a8b443",
+        "image": "public.ecr.aws/supabase/kong:2.8.1",
+        "image_id": "sha256:1b53405d8680a09d6f44494b7990bf7da2ea43f84a258c59717d4539abf09f6d",
+        "memory_limit_bytes": 0,
+        "nano_cpus": 0
+      },
+      {
+        "name": "/supabase_db_ferrixopsbench9ec3a8b443",
+        "image": "public.ecr.aws/supabase/postgres:17.11.0.006",
+        "image_id": "sha256:c141fd17ac6a76c4323e90b3aee8ff1a23d2e89e547c2b963cfadc309c079cc2",
+        "memory_limit_bytes": 0,
+        "nano_cpus": 0
+      }
+    ]
+  },
+  "metric": "Node performance.now: request start to complete body; identity encoding; JSON validation excluded",
+  "fixture_scope": "50 employees, 5 categories and synthetic expenses; attendance/tasks/leave intentionally not seeded in this focused experiment",
+  "optimization": [
+    "CREATE INDEX bench_expenses_status_created ON public.expenses (status, created_at DESC, id DESC)",
+    "CREATE INDEX bench_expenses_owner_created ON public.expenses (submitted_by, created_at DESC, id DESC)"
+  ],
+  "role": "OWNER",
+  "credentials_saved": false
+}

@@ -6,6 +6,8 @@ For a step-by-step plan to produce the API-latency claim without factory deploym
 
 ## Existing evidence to preserve
 
+- The [completed expense API study](ferrixOps_API_BENCHMARK_RESULTS.md) measured mixed-workload p95 of 104.89 → 35.90 ms (65.8%) across five pairs, 10,000 synthetic expenses and 20 virtual clients, with zero failures in 260,351 measured requests. Deep-page classes regressed; retain that qualification.
+
 - Task creation changed from three service operations to one RPC: 67% less service-level request orchestration, excluding refresh/auth/retries.
 - Route splitting reduced initial static JavaScript from about 1,262 KB to 501 KB (60%), and gzip from about 348 KB to 146 KB (58%). This is a bundle-size result, not a measured load-time improvement.
 - The focused database suite passes 24 checks. An 8-worker exercise created 20 tasks with distinct positions and exactly one creation audit record each. This is a small local concurrency test, not evidence of production scale.

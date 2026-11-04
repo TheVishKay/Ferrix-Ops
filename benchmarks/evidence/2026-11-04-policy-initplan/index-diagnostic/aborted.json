@@ -1,0 +1,5 @@
+{
+  "status": "aborted",
+  "error": "Benchmark interrupted by SIGTERM",
+  "completed_runs": 2
+}
