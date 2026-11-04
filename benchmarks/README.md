@@ -16,7 +16,7 @@ npm run bench:full
 
 Supabase CLI and the PostgreSQL setup client are pinned development dependencies. The load generator is Node's built-in HTTP fetch implementation with a monotonic `performance.now()` clock. Unlike the initial roadmap's k6 proposal, this implementation needs no separate k6 installation. The metric is **complete HTTP response duration including connection establishment when needed**, not k6's established-connection `http_req_duration`.
 
-First startup downloads the official local-stack container images using a temporary Docker client configuration for anonymous public-image pulls. It does not consult stored registry credentials or modify your Docker settings. Only the generated loopback API/database addresses are accepted. The runner never reads `.env`, links a hosted project, runs `db push`, or resets the regular local project. The isolated full migration chain includes the application's Storage policies; optional UI/analytics/edge services are excluded from startup. Administrative credentials are used only for synthetic setup and remain in memory.
+First startup downloads the official local-stack container images using a temporary Docker client configuration for anonymous public-image pulls. It does not consult stored registry credentials or modify your Docker settings. Only the generated loopback API/database addresses are accepted. The runner never reads `.env`, links a hosted project, runs `db push`, or resets the regular local project. The isolated baseline migration chain includes the application's Storage policies; the selected optimization migration is intentionally withheld until the candidate phase. Optional UI/analytics/edge services are excluded from startup. Administrative credentials are used only for synthetic setup and remain in memory.
 
 | Setting                       | Smoke                                      | Full                                        |
 | ----------------------------- | ------------------------------------------ | ------------------------------------------- |
@@ -41,7 +41,7 @@ Both variants execute the **same normalized benchmark query** through PostgREST:
 - Three filter classes (all, paid, submitted/date-window), each with first/middle/deep pages; the schedule and expected responses are generated from the same deterministic fixture.
 - Real Auth access tokens and existing RLS policies; no service-role key in measured requests.
 
-**Baseline:** existing application indexes. **Candidate:** baseline plus `(status, created_at DESC, id DESC)` and `(submitted_by, created_at DESC, id DESC)` composite indexes. Candidate indexes are dropped before each baseline run. Pair order alternates to reduce ordering bias. This evaluates candidate indexes; it does not assume they help.
+**Baseline:** original expense SELECT policies. **Candidate:** the actual `20261104000001_optimize_expense_read_policies.sql` migration, which wraps the identity-only `get_my_role()` calls in scalar subqueries in the OWNER/ACCOUNTS read policies. PostgreSQL can evaluate these once per statement rather than repeatedly per scanned row. The status/ownership predicates, roles, commands and grants are preserved; no indexes are added. Original policy expressions are restored before every baseline phase. The runner also asserts that policy counts/commands/roles, unrelated expressions, table grants and RLS enablement remain unchanged. Pair order alternates to reduce ordering bias.
 
 This is not a benchmark of the original unpaginated browser screen, and the normalized query has not replaced that screen. The dashboard, write concurrency, task-board loading, browser rendering, arrival-rate scenarios and hosted performance are outside this first implementation. Expense data is synthetic and bulk-seeded; creation workflows are not exercised by the seed.
 
@@ -63,6 +63,8 @@ The response timer covers fetch start through body consumption and excludes JSON
 
 Smoke mode is **never eligible for a resume latency claim**. Full mode requires a committed source tree, five pairs, at least 2,000 successes per run, zero measured HTTP/semantic failures, no flagged generator saturation, a positive median p95 improvement and no pair regression above 5%. Passing these checks means **candidate for human review**, not automatic proof of statistical significance or production capacity. Inspect CPU/memory contention, per-query results and run variation. Same-machine Docker tests include contention between generator and backend; do not generalize to hosted latency.
 
+An initial index-only diagnostic at commit `b834566` produced no improvement and still used full scans with repeated role-helper evaluation. That exploratory run was intentionally stopped after one completed pair, retained as diagnostic evidence, and excluded from the confirmatory policy-optimization results.
+
 Representative SQL plans are diagnostics with authenticated role/claims; they are not the exact PostgREST embedded-query plan. Existing database-only task checks remain separate. Full-stack startup can expose migration issues that the focused task fixture did not cover; such failures stop measurement rather than being bypassed.
 
 Do not commit raw local CLI status, temporary project config or authentication output. Results are gitignored by default. Review generated reports before explicitly selecting artifacts for publication.
@@ -76,7 +78,7 @@ Unit tests run with the frontend CI job. The manually dispatched **Expense API b
 - **Docker unavailable:** start the installed engine, then rerun. No hosted deployment is needed.
 - **First startup is slow:** container downloads can take several minutes. The runner emits startup progress and has a bounded command timeout.
 - **Migration or RLS failure:** keep the aborted report and fix/reproduce the cause before timing. Do not disable authorization to get a faster result.
-- **No improvement:** retain the negative result. Inspect plans and workload selectivity; two composite indexes are candidates, not a guaranteed speedup.
+- **No improvement:** retain the negative result. Inspect plans and workload selectivity; policy tuning is a candidate, not a guaranteed speedup.
 - **Cleanup failure:** the runner prints only the temporary project ID/workdir. Run `npx supabase stop --no-backup --workdir <that-exact-workdir>` to stop that project. Do not use a global/all-project cleanup command.
 
 For the larger methodology and future experiments, see the [benchmark roadmap](../docs/ferrixOps_API_BENCHMARK_ROADMAP.md).

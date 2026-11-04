@@ -68,7 +68,7 @@ For automated expense API testing without factory deployment, see the [local ben
 
 Use the Supabase CLI for a deliberately selected local/staging project before deploying:
 
-1. Apply the migrations in `supabase/migrations` in order and verify their status. The latest proposed migration, `20261023000001_harden_task_ordering.sql`, is tested locally but has not been applied to hosted Supabase by this review.
+1. Apply the migrations in `supabase/migrations` in order and verify their status. Task hardening (`20261023000001_harden_task_ordering.sql`) and expense read-policy tuning (`20261104000001_optimize_expense_read_policies.sql`) are local migrations; this work does not apply them to hosted Supabase.
 2. Configure Supabase Auth site/redirect URLs, email/password policy and signup behavior for your internal application.
 3. Bootstrap the first OWNER account through trusted administrative tooling; standard signups default to EMPLOYEE.
 4. Deploy `create-employee` and `update-employee-status` Edge Functions with their required server-side environment configuration. Keep administrative secrets out of source and client bundles.

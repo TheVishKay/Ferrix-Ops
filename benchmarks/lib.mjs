@@ -11,10 +11,7 @@ export const STATUSES = [
 ];
 export const PROJECTION =
   "id,expense_number,submitted_by,category_id,vendor_name,amount,currency,expense_date,status,created_at,employee:employees!expenses_submitted_by_fkey(id,first_name,last_name,employee_code)";
-export const CANDIDATE_INDEXES = [
-  "CREATE INDEX bench_expenses_status_created ON public.expenses (status, created_at DESC, id DESC)",
-  "CREATE INDEX bench_expenses_owner_created ON public.expenses (submitted_by, created_at DESC, id DESC)",
-];
+export const CANDIDATE_MIGRATION = "20261104000001_optimize_expense_read_policies.sql";
 
 export function digest(value) {
   return createHash("sha256")

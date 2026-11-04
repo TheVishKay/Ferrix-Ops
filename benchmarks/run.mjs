@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { cpus, totalmem, platform, release, tmpdir } from "node:os";
 import { mkdtemp, mkdir, readFile, writeFile, readdir, cp, rm } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { performance, monitorEventLoopDelay } from "node:perf_hooks";
@@ -12,7 +12,7 @@ import net from "node:net";
 import pg from "pg";
 import { createClient } from "@supabase/supabase-js";
 import {
-  CANDIDATE_INDEXES,
+  CANDIDATE_MIGRATION,
   compare,
   digest,
   expensePath,
@@ -58,6 +58,9 @@ let workdir;
 let db;
 let started = false;
 let dockerEnvironment;
+let candidateSql;
+let baselinePolicies;
+let baselineAcl;
 const runs = [];
 
 async function command(binary, args) {
@@ -346,15 +349,38 @@ async function load(url, key, token, entries, seconds) {
 }
 
 async function setVariant(variant) {
-  await db.query("DROP INDEX IF EXISTS public.bench_expenses_status_created");
-  await db.query("DROP INDEX IF EXISTS public.bench_expenses_owner_created");
-  if (variant === "candidate") for (const statement of CANDIDATE_INDEXES) await db.query(statement);
+  const targets = new Set(["Accounts view submitted expenses", "Owner views all expenses"]);
+  for (const policy of baselinePolicies.filter((p) => targets.has(p.policyname))) {
+    const name = '"' + policy.policyname.replaceAll('"', '""') + '"';
+    await db.query(`ALTER POLICY ${name} ON public.expenses USING (${policy.qual})`);
+  }
+  if (variant === "candidate") await db.query(candidateSql);
+  const policies = (
+    await db.query(
+      "SELECT policyname,cmd,roles::text,permissive,qual,with_check FROM pg_policies WHERE schemaname='public' AND tablename='expenses' ORDER BY policyname",
+    )
+  ).rows;
+  assert.equal(policies.length, baselinePolicies.length, "Policy count changed");
+  for (const [index, policy] of policies.entries()) {
+    const original = baselinePolicies[index];
+    for (const field of ["policyname", "cmd", "roles", "permissive", "with_check"])
+      assert.deepEqual(policy[field], original[field], `Policy ${field} changed`);
+    if (variant === "baseline" || !targets.has(policy.policyname))
+      assert.equal(policy.qual, original.qual, "Unrelated policy changed");
+  }
+  const acl = (
+    await db.query(
+      "SELECT relrowsecurity,relacl::text FROM pg_class WHERE oid='public.expenses'::regclass",
+    )
+  ).rows[0];
+  assert.deepEqual(acl, baselineAcl, "Table grants or RLS enablement changed");
   await db.query("ANALYZE public.expenses");
-  return (
+  const indexes = (
     await db.query(
       "SELECT indexname,indexdef,pg_relation_size(indexname::regclass)::text bytes FROM pg_indexes WHERE schemaname='public' AND tablename='expenses' ORDER BY indexname",
     )
   ).rows;
+  return { indexes, policies };
 }
 
 async function plan(actor) {
@@ -378,7 +404,7 @@ async function plan(actor) {
 function markdown(result) {
   return (
     `# ferrixOps expense API benchmark\n\nMode: **${config.mode}**. Local synthetic fixture: **${config.rows} expenses, 50 employees**.\n\n` +
-    `This compares an equivalent 50-row HTTP contract with existing indexes versus two candidate composite indexes. It is not a before/after measurement of the original unpaginated UI.\n\n` +
+    `This compares an equivalent 50-row HTTP contract before/after statement-level role-helper evaluation in two SELECT policies. Indexes, grants and visibility rules are unchanged. It is not a before/after measurement of the original unpaginated UI.\n\n` +
     `Timing: Node monotonic clock from fetch start through full response-body consumption, including connection setup if needed; JSON parsing and assertions are outside the timed interval. HTTP compression requested as identity.\n\n` +
     `| Pair | Variant | Attempts | Failures | p50 ms | p95 ms | Successful ops/s | Mean body bytes |\n|---|---|---|---|---|---|---|---|\n` +
     runs
@@ -422,7 +448,11 @@ async function main() {
     .replaceAll("55322", String(ports[1]))
     .replaceAll("55320", String(ports[2]));
   await writeFile(join(supabase, "config.toml"), toml);
-  await cp(join(ROOT, "supabase/migrations"), join(supabase, "migrations"), { recursive: true });
+  candidateSql = await readFile(join(ROOT, "supabase/migrations", CANDIDATE_MIGRATION), "utf8");
+  await cp(join(ROOT, "supabase/migrations"), join(supabase, "migrations"), {
+    recursive: true,
+    filter: (path) => basename(path) !== CANDIDATE_MIGRATION,
+  });
   const migrations = await Promise.all(
     (await readdir(join(supabase, "migrations")))
       .filter((name) => name.endsWith(".sql"))
@@ -458,6 +488,25 @@ async function main() {
   assert.ok(key && serviceKey, "CLI did not return local API keys");
   db = new pg.Client({ connectionString: databaseUrl.toString() });
   await db.connect();
+  baselinePolicies = (
+    await db.query(
+      "SELECT policyname,cmd,roles::text,permissive,qual,with_check FROM pg_policies WHERE schemaname='public' AND tablename='expenses' ORDER BY policyname",
+    )
+  ).rows;
+  baselineAcl = (
+    await db.query(
+      "SELECT relrowsecurity,relacl::text FROM pg_class WHERE oid='public.expenses'::regclass",
+    )
+  ).rows[0];
+  assert.equal(
+    baselinePolicies.filter(
+      (p) =>
+        ["Accounts view submitted expenses", "Owner views all expenses"].includes(p.policyname) &&
+        p.cmd === "SELECT",
+    ).length,
+    2,
+  );
+  assert.equal(baselineAcl.relrowsecurity, true);
   const data = fixture(config.rows);
   const admin = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -491,6 +540,7 @@ async function main() {
     "benchmarks/lib.mjs",
     "benchmarks/supabase/config.toml",
     "package-lock.json",
+    `supabase/migrations/${CANDIDATE_MIGRATION}`,
   ];
   const manifest = {
     config,
@@ -521,7 +571,12 @@ async function main() {
       "Node performance.now: request start to complete body; identity encoding; JSON validation excluded",
     fixture_scope:
       "50 employees, 5 categories and synthetic expenses; attendance/tasks/leave intentionally not seeded in this focused experiment",
-    optimization: CANDIDATE_INDEXES,
+    optimization: {
+      migration: CANDIDATE_MIGRATION,
+      sha256: digest(candidateSql),
+      description:
+        "Uncorrelated role-helper subqueries in two existing SELECT policies; same grants, indexes and row visibility",
+    },
     role: config.role,
     credentials_saved: false,
   };
@@ -529,7 +584,7 @@ async function main() {
   for (let pair = 1; pair <= config.repeats; pair++) {
     const order = pair % 2 ? ["baseline", "candidate"] : ["candidate", "baseline"];
     for (const variant of order) {
-      const indexes = await setVariant(variant);
+      const { indexes, policies } = await setVariant(variant);
       console.log(`Pair ${pair}/${config.repeats}, ${variant}: correctness gate…`);
       const checks = await correctness(url, key, data, actors, missingActor);
       const token = await login(url, key, actors[0]);
@@ -545,6 +600,7 @@ async function main() {
         variant,
         correctness_checks: checks,
         indexes,
+        policies,
         metrics: summarize(measured.samples, measured.elapsed),
         runtime: measured.runtime,
         actual_seconds: measured.elapsed,
