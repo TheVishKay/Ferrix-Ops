@@ -94,8 +94,4 @@ node benchmarks/plot-results.mjs benchmarks/evidence/2026-11-04-policy-initplan/
 
 Re-run the measured implementation from a separate checkout of `a31ea38`, install its lockfile, start Docker, and run `npm run bench:unit` followed by `npm run bench:full`. The [manifest](../benchmarks/evidence/2026-11-04-policy-initplan/confirmatory/manifest.json) records the actual runtime, image identifiers, hardware, hashes and settings. Different hardware, runtime versions, container images or background load need not reproduce the same millisecond values. Preserve unsuccessful and unfavorable results instead of selecting a faster run.
 
-## Resume wording supported by this experiment
 
-> Optimized PostgreSQL RLS evaluation, reducing mixed-workload expense API p95 latency by **66% (104.9 → 35.9 ms)** across **10,000 synthetic records and 20 virtual clients**, validated over five paired benchmark runs.
-
-Keep “mixed-workload” and “synthetic” in the wording or immediately accessible methodology. This result supports a reproducible engineering-performance claim; it does not support “used by 50 factory employees,” real processing-time savings, production uptime or a blanket claim that every expense query improved.
