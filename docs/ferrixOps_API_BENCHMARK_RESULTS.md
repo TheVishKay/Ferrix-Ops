@@ -1,4 +1,4 @@
-# ferrixOps expense API benchmark — 4 November 2026
+# ferrixOps expense API benchmark 
 
 **Measured outcome:** statement-level role-helper evaluation reduced the median run-level p95 of the declared mixed expense-read workload from **104.89 ms to 35.90 ms (65.78%)**. The five-pair local test used **10,000 synthetic expenses, 50 synthetic employee records and 20 virtual clients**, with **260,351 measured requests and zero HTTP or response-correctness failures**.
 
