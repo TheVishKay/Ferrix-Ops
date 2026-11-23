@@ -9,6 +9,7 @@
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.2-2196F3)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-7F52FF)
 ![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.12-4CAF50)
+![License](https://img.shields.io/badge/License-MIT-4CAF50)
 
 </div>
 
@@ -103,8 +104,8 @@ _Detailed step-by-step reproduction instructions are available in the [Engineeri
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/TheVishKay/Alum_Factory_EMS.git
-cd Alum_Factory_EMS
+git clone https://github.com/TheVishKay/Ferrix-Ops.git
+cd Ferrix-Ops
 
 # 2. Install dependencies with pinned lockfile
 npm ci
@@ -301,7 +302,7 @@ Tracked in [docs/ferrixOps_RESUME_ROADMAP.md](docs/ferrixOps_RESUME_ROADMAP.md) 
 
 ## License
 
-This repository does not currently specify an open-source license. All rights are reserved by the repository owner. To request licensing or commercial permission, please open an issue or contact the maintainers.
+This project is licensed under the terms of the [MIT License](LICENSE).
 
 ---
 
