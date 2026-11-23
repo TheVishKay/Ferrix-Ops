@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="FerrixOps engineering case study on expense approvals, transactional task updates, and PostgreSQL row-level security performance."
+    />
+    <title>FerrixOps | Engineering case study</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="shell header-content">
+        <a class="wordmark" href="#main">FerrixOps</a>
+        <nav aria-label="Case study sections">
+          <a href="#workflow">Workflow</a>
+          <a href="#transactions">Transactions</a>
+          <a href="#benchmark">Benchmark</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" aria-labelledby="title">
+        <div class="hero-copy">
+          <h1 id="title">Manufacturing operations, built around clear approvals</h1>
+          <p class="intro">
+            FerrixOps brings employee administration, attendance, leave, expenses, and tasks into a
+            single React application backed by Supabase Auth and PostgreSQL.
+          </p>
+          <a class="button" href="#benchmark">See how it was measured</a>
+        </div>
+
+        <figure class="benchmark-card" aria-labelledby="chart-title">
+          <div class="chart-heading">
+            <h2 id="chart-title">Expense API latency</h2>
+            <p class="chart-unit">Mixed workload, median run-level p95</p>
+          </div>
+          <div class="chart-result"><strong>65.8%</strong> lower p95</div>
+          <dl
+            class="bar-chart"
+            aria-label="Zero-based comparison of p95 response times in milliseconds"
+          >
+            <div class="bar-entry baseline">
+              <dt>Baseline</dt>
+              <dd>104.9 ms</dd>
+            </div>
+            <div class="bar-entry candidate">
+              <dt>Optimized</dt>
+              <dd>35.9 ms</dd>
+            </div>
+          </dl>
+          <figcaption>
+            Five paired local runs, 10,000 synthetic expenses, and 20 virtual clients.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="section shell" id="workflow" aria-labelledby="workflow-title">
+        <div class="section-intro">
+          <h2 id="workflow-title">One expense, three roles</h2>
+          <p>
+            A synthetic ₹2,450 claim for a replacement torque wrench shows where each role hands off
+            to the next.
+          </p>
+        </div>
+        <div class="workflow-layout">
+          <ol class="steps">
+            <li>
+              <h3>Employee submits</h3>
+              <p>The employee saves a draft, submits it, and tracks their own claim.</p>
+            </li>
+            <li>
+              <h3>Accounts reviews</h3>
+              <p>Accounts can approve, reject, or return a submitted claim with remarks.</p>
+            </li>
+            <li>
+              <h3>Owner gives final approval</h3>
+              <p>The claim enters Payment Pending once the Owner approves it.</p>
+            </li>
+            <li>
+              <h3>Accounts records payment</h3>
+              <p>
+                The database records the external payment using the approved amount, marks the claim
+                Paid, and writes the audit event in one transaction.
+              </p>
+            </li>
+          </ol>
+          <figure class="workflow-image">
+            <a href="expense-record-payment.png">
+              <img
+                src="expense-record-payment.png"
+                alt="Accounts payment form showing the synthetic ₹2,450 approved amount and a demo bank transfer reference"
+                width="1440"
+                height="900"
+              />
+            </a>
+            <figcaption>
+              The Accounts payment form from a local walkthrough with synthetic data. Select the
+              image to view it at full size.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section shell" id="transactions" aria-labelledby="transactions-title">
+        <div class="section-intro">
+          <h2 id="transactions-title">Task updates commit with their audit trail</h2>
+          <p>
+            React guides people to the actions for their role. PostgreSQL grants and row-level
+            security govern the rows they can read. A PostgreSQL function handles the task status
+            change in a single transaction.
+          </p>
+        </div>
+
+        <div class="transaction-layout">
+          <div class="transition">
+            <span>In progress</span><span aria-hidden="true">→</span><span>Ready for review</span>
+          </div>
+          <p>
+            When an assignee submits a task for review, the function looks up their role and locks
+            the task row with <code>SELECT … FOR UPDATE</code>. It checks the assignment and the
+            transition against the locked row, updates the status, and records the actor and before
+            and after states. An audit write failure aborts the transaction.
+          </p>
+          <p>
+            In the database regression suite, two simultaneous assignee requests trigger one
+            successful transition. The second request sees the committed status after acquiring the
+            lock and fails validation. A separate test forces an audit failure during task creation
+            and verifies that the task insert rolls back.
+          </p>
+        </div>
+      </section>
+
+      <section class="section shell" id="benchmark" aria-labelledby="benchmark-title">
+        <div class="section-intro">
+          <h2 id="benchmark-title">Why the read policy got faster</h2>
+          <p>
+            An early index experiment showed no gain in its one completed pair. In the baseline
+            plan, the expense read policies called a role lookup in the row filter even though the
+            caller’s role did not depend on the row.
+          </p>
+        </div>
+        <div class="benchmark-layout">
+          <div>
+            <h3>Evaluate the role once per statement</h3>
+            <p>
+              Wrapping the Owner and Accounts role lookups in scalar subqueries allowed PostgreSQL
+              to evaluate them as InitPlans in the observed plans. Both variants used the same
+              visibility rules and indexes.
+            </p>
+            <details>
+              <summary>Benchmark method</summary>
+              <p>
+                Five baseline and candidate pairs ran in a temporary local Supabase stack with
+                alternating order. Both variants used the same synthetic dataset, a shared synthetic
+                Owner identity across 20 virtual clients, and the same keyset-paginated queries
+                through PostgREST. Each run had a 30-second warmup and five minutes of measurement.
+                Each response was checked against expected data.
+              </p>
+              <p>
+                Independent recomputation verified the results from 260,351 requests with zero HTTP
+                or response-correctness failures. These are measurements for the local query mix.
+                The browser uses a different list query.
+              </p>
+            </details>
+            <a class="download" href="benchmark-pairs.csv" download
+              >Download all five p95 pairs (CSV)</a
+            >
+          </div>
+          <div class="tradeoffs">
+            <h3>Deep pages took longer</h3>
+            <p>
+              All three deep-page query classes regressed. A workload with more deep-page reads
+              could see a different result.
+            </p>
+            <table>
+              <caption>
+                Deep-page p95 in milliseconds
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Query</th>
+                  <th scope="col">Baseline</th>
+                  <th scope="col">Optimized</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Unfiltered</th>
+                  <td>9.16</td>
+                  <td>24.91</td>
+                </tr>
+                <tr>
+                  <th scope="row">Paid</th>
+                  <td>12.95</td>
+                  <td>27.72</td>
+                </tr>
+                <tr>
+                  <th scope="row">Submitted by date</th>
+                  <td>12.73</td>
+                  <td>27.12</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell footer">
+      <span>FerrixOps</span>
+      <a href="#main">Back to top</a>
+    </footer>
+  </body>
+</html>

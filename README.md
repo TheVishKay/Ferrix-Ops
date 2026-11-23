@@ -1,89 +1,314 @@
-# ferrixOps — Secure Manufacturing Operations Platform
+<div align="center">
 
-ferrixOps is a React/Supabase internal operations application designed for a 30–50-person manufacturing workforce. Source: [ferrixOps on GitHub](https://github.com/TheVishKay/Alum_Factory_EMS).
+# FerrixOps
 
-Five workflows are implemented in source:
+### Manufacturing Operations and Workforce Management Platform
 
-- Employee directory, organization structure and account provisioning/status lifecycle.
-- Server-timestamped attendance and owner-reviewed correction requests.
-- Leave submission, review and cancellation, including attendance integration.
-- Expense submission, accounts/owner review, document attachments and payment records.
-- Assigned tasks, validated status transitions, ordering and transactional audit logging.
+![Platform](https://img.shields.io/badge/Platform-Web-4CAF50)
+![React](https://img.shields.io/badge/React-19.2-2196F3)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4.2-2196F3)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-7F52FF)
+![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A522.12-4CAF50)
 
-Implementation does not establish hosted deployment or actual workforce adoption. See the [current review](docs/ferrixOps_REVIEW_2026-10-23.md) for evidence and release gaps, and the [measurable engineering roadmap](docs/ferrixOps_RESUME_ROADMAP.md) for prioritized improvements, benchmark targets and resume templates. Earlier `audit_report.md` and `ferrixOps_CURRENT_STATE_CONTEXT.md` are historical snapshots and contain superseded findings.
+</div>
 
-## Stack and roles
+**FerrixOps** is an internal manufacturing operations and workforce management platform designed for industrial teams of 30–50 personnel. Built with React 19, Tailwind CSS 4, and Supabase on PostgreSQL 17, it unifies employee directory administration, server-timestamped attendance, leave tracking, multi-tier expense approvals, and kanban task management into a single authenticated application. All access boundaries, workflow status transitions, and audit trails are enforced at the database layer through Row-Level Security (RLS) and atomic PostgreSQL stored procedures. Local benchmark evaluations demonstrate a 65.8% p95 latency reduction on mixed expense read workloads via scalar subquery InitPlan optimizations.
 
-React 19, Vite 8, React Router, Tailwind CSS 4 and Radix UI; Supabase Auth, PostgreSQL, Storage and Deno Edge Functions. Local Supabase configuration targets PostgreSQL 17.
+[Engineering walkthrough](docs/WALKTHROUGH.md) · [Local setup guide](docs/LOCAL_SETUP.md) · [Benchmark report](docs/ferrixOps_API_BENCHMARK_RESULTS.md) · [Benchmark evidence](benchmarks/evidence/2026-11-04-policy-initplan/)
 
-- **OWNER:** employee administration, approvals and task administration.
-- **ACCOUNTS:** financial review/payment and permitted directory/operational access.
-- **EMPLOYEE:** self-service attendance, leave, expenses and assigned tasks.
+---
 
-Protected routes provide navigation controls. Database RLS, privileges and RPC role checks enforce authorization independently of the UI. Service-role credentials belong only in server-side functions.
+## Table of contents
 
-## Local setup
+- [Features](#features)
+- [Architecture and authorization](#architecture-and-authorization)
+- [Expense approval workflow](#expense-approval-workflow)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Project structure](#project-structure)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Performance benchmark](#performance-benchmark)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
-Use a supported Node version compatible with the pinned Vite dependency; CI selects Node 22. The existing package lock is committed.
+---
+
+## Features
+
+- **Role-based operational workspaces**: Tailored portals and navigation menus for **Owner**, **Accounts**, and **Employee** roles, isolated via client route guards and enforced through PostgreSQL Row-Level Security (RLS).
+- **Multi-tier expense approvals**: Structured lifecycle spanning employee draft submission, line-item verification by Accounts, executive Owner sign-off, and external bank disbursement recording.
+- **Attendance and leave lifecycle**: Server-timestamped clock-in/out records, manager-reviewed punch corrections, and integrated leave requests with calendar validation.
+- **Atomic task management**: Kanban board with drag-and-drop sequencing, strict state transitions serialized via PostgreSQL row locks (`SELECT ... FOR UPDATE`), and atomic audit logging.
+- **Optimized read performance**: PostgREST scalar subquery InitPlan optimizations eliminating per-row function evaluation for a 65.8% p95 read latency reduction across 10,000 synthetic records.
+- **Protected document storage**: Private Supabase Storage bucket for receipt attachments with time-limited signed URL generation and server-side MIME verification.
+
+---
+
+## Architecture and authorization
+
+FerrixOps decouples frontend presentation from backend security. The React user interface guides users through next actions, but all authorization boundaries, row visibility rules, and workflow state transitions are verified independently in PostgreSQL.
+
+```mermaid
+flowchart LR
+    UI["React Client (Vite 8)"] <-->|Auth Session & Tokens| Auth["Supabase Auth (GoTrue)"]
+    UI -->|Filtered SELECT| PostgREST["PostgREST API"]
+    UI -->|Authorized Actions| RPC["PostgreSQL Stored Procedures"]
+    PostgREST -->|Row-Level Security| DB[("PostgreSQL 17 Database")]
+    RPC -->|Atomic Mutations & Audit Logs| DB
+```
+
+### Role-based access control (RBAC)
+
+| Role         | Scope & Permissions                                                           | Permitted Actions                                                                               |
+| :----------- | :---------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------- |
+| **Owner**    | Complete organizational and financial visibility across all records           | Account provisioning, leave & attendance approvals, final expense sign-off, task delegation     |
+| **Accounts** | Financial review, expense auditing, and read-only directory/attendance access | Review submitted expenses, record external bank disbursements, inspect workforce records        |
+| **Employee** | Self-service operations restricted to personal records and assignments        | Clock in/out, submit leave requests, file draft/submitted expense claims, update assigned tasks |
+
+Direct client table mutations are revoked for core business workflows. State transitions occur through transactional stored procedures (`SECURITY DEFINER` with explicit search paths) that validate caller identity, current record state, and audit log generation in a single database transaction.
+
+---
+
+## Expense approval workflow
+
+Expenses move through a deterministic state machine before external reimbursement is recorded:
+
+1. **Employee submission**: The employee creates a draft claim, uploads receipts to the private storage bucket, and submits. `submit_expense` locks the draft row, verifies ownership, and transitions it to `SUBMITTED`.
+2. **Accounts review**: Accounts inspects line items under **Needs My Action**. Approving via `review_expense_accounts` advances the claim to `PENDING_OWNER_APPROVAL`. Accounts may also reject or return with remarks for revision.
+3. **Owner sign-off**: The Owner evaluates the claim and executes `review_expense_owner`, moving it to `PAYMENT_PENDING`.
+4. **Payment recording**: Accounts records the disbursement with an external payment reference (e.g., bank transfer code). `record_payment` locks the approved record, inserts into `expense_payments`, flags the status as `PAID`, and logs the audit event atomically.
+
+![Accounts recording a bank transfer for a synthetic expense](docs/images/expense-record-payment.png)
+
+_Detailed step-by-step reproduction instructions are available in the [Engineering walkthrough](docs/WALKTHROUGH.md)._
+
+---
+
+## Prerequisites
+
+- **Node.js**: `v22.12.0` or later (tested on Node 22 LTS)
+- **npm**: `v10.0.0` or later
+- **Docker Desktop**: Required to run the local Supabase container stack (PostgreSQL 17, PostgREST, GoTrue Auth, Storage, and Inbucket)
+- **Python 3**: `3.10+` (optional; only needed for the standalone task database regression runner)
+- **PostgreSQL Client Binaries**: `initdb`, `pg_ctl`, and `psql` with `pgcrypto` (optional; only required for `npm run test:db`)
+
+---
+
+## Installation
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/TheVishKay/Alum_Factory_EMS.git
+cd Alum_Factory_EMS
+
+# 2. Install dependencies with pinned lockfile
 npm ci
+
+# 3. Start the local Supabase development environment
+npx supabase start
+
+# 4. Create the local environment file
 cp .env.example .env
-# Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.
+```
+
+After starting Supabase, retrieve your local API URL and publishable anonymous key from the CLI output (or by running `npx supabase status`), and populate `.env`:
+
+```env
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_PUBLISHABLE_KEY=your-local-anon-key
+```
+
+Start the local development server:
+
+```bash
 npm run dev
 ```
 
-The browser needs valid Supabase configuration to initialize. A publishable/anon key is a client identifier; never put a service-role key in a `VITE_` variable.
+The application will be accessible at `http://localhost:5173`.
 
-```bash
-npm run lint
-npm run build
-npm run preview
+---
+
+## Usage
+
+### Seed synthetic demo accounts
+
+To exercise the multi-role approval workflow locally:
+
+1. Navigate to the local Supabase Studio URL (`http://127.0.0.1:54323`).
+2. Under **Authentication → Users**, create three confirmed users:
+   - `owner@ferrixops.example`
+   - `accounts@ferrixops.example`
+   - `employee@ferrixops.example`
+3. Execute the role-assignment and employee profile script provided in the [Local setup guide](docs/LOCAL_SETUP.md#seed-a-synthetic-expense-demo) within the Studio **SQL Editor**.
+4. Log into the web application as `employee@ferrixops.example` to file a claim, `accounts@ferrixops.example` to review, and `owner@ferrixops.example` to grant final authorization.
+
+---
+
+## Configuration
+
+The application requires two frontend environment variables defined in `.env`:
+
+| Name                            | Description                               | Default                  | Required |
+| :------------------------------ | :---------------------------------------- | :----------------------- | :------- |
+| `VITE_SUPABASE_URL`             | Base URL of the Supabase API gateway      | `http://127.0.0.1:54321` | Yes      |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Client-side anonymous/publishable API key | None                     | Yes      |
+
+> [!IMPORTANT]
+> Never expose administrative credentials such as `SUPABASE_SERVICE_ROLE_KEY` in `VITE_*` variables or client bundles. Service-role privileges bypass RLS and are strictly confined to backend Edge Functions.
+
+---
+
+## Project structure
+
+```text
+.
+├── benchmarks/         # Automated load testing harness, query plans & statistical evidence
+├── docs/               # Technical walkthroughs, architecture notes, and benchmark reports
+│   ├── case-study/     # Interactive case study static report and styles
+│   ├── images/         # UI workflow captures and visual assets
+│   ├── LOCAL_SETUP.md  # Detailed local stack setup, user seeding & demo instructions
+│   └── WALKTHROUGH.md  # 5-minute deep-dive on expense and task RPC state machines
+├── public/             # Static public web assets
+├── scripts/            # Standalone Python PostgreSQL concurrency and isolation runners
+├── src/
+│   ├── components/     # Reusable UI primitives, forms, dialogs, and layout containers
+│   ├── contexts/       # React contexts for authentication session management
+│   ├── hooks/          # Custom hooks for viewport, debounce, and state binding
+│   ├── lib/            # Utilities and Supabase client configuration
+│   ├── pages/          # Top-level view routes (Attendance, Expenses, Tasks, etc.)
+│   └── services/       # Client service wrappers for Supabase RPCs and table queries
+├── supabase/
+│   ├── functions/      # Deno-based Supabase Edge Functions (admin provisioning)
+│   └── migrations/     # Version-controlled PostgreSQL schemas, RLS, and RPC definitions
+└── tests/              # Subsystem unit tests and database integration fixtures
 ```
 
-Pages load through React lazy imports. To inspect production chunk sizes and static dependencies:
+---
+
+## Testing
+
+```bash
+# Run ESLint across all JavaScript/JSX source files
+npm run lint
+
+# Format codebase using Prettier
+npm run format
+
+# Validate production bundle build
+npm run build
+
+# Run unit tests for the benchmark harness utilities
+npm run bench:unit
+
+# Run the task database regression suite (requires Python 3 & local postgresql)
+npm run test:db
+
+# Run the quick smoke test for the expense API benchmark
+npm run bench:smoke
+
+# Execute the full paired benchmark suite across 10,000 synthetic records
+npm run bench:full
+```
+
+### Continuous integration (CI)
+
+GitHub Actions runs automated checks on every pull request and push to `main` via [.github/workflows/ci.yml](.github/workflows/ci.yml):
+
+- **frontend job**: Sets up Node.js 22, installs dependencies via `npm ci`, runs benchmark unit checks (`npm run bench:unit`), executes ESLint (`npm run lint`), and verifies production compilation (`npm run build`).
+- **task-database job**: Boots an Ubuntu runner with PostgreSQL and `pgcrypto` to execute `scripts/test_task_database.py`, testing role authorization, row locking, and transactional rollback on audit failures.
+
+---
+
+## Deployment
+
+### Production build
+
+```bash
+npm run build
+```
+
+To inspect route chunks, lazy-loaded dependencies, and bundle weight:
 
 ```bash
 npm run build -- --manifest
-# Inspect dist/.vite/manifest.json and its imports graph.
+# Output manifest generated at dist/.vite/manifest.json
 ```
 
-## Task database regression suite
+### Hosting target recommendations
 
-Requires Python 3 and local PostgreSQL binaries, including `initdb`, `pg_ctl`, `psql` and the `pgcrypto` extension. Run as a normal user, not root.
+- **Frontend SPA**: Deploy `dist/` to any static hosting provider (e.g., Vercel, Netlify, Cloudflare Pages). Configure a single rewrite rule redirecting all non-file requests to `/index.html`.
+- **Database & Auth**: Target a hosted Supabase project using `npx supabase db push` to apply migrations in order.
+- **Edge Functions**: Deploy administrative functions (`create-employee`, `update-employee-status`) via `npx supabase functions deploy` with server-side secrets.
+- **Storage**: Verify that the `expense-documents` bucket is set to private and that download URLs are generated exclusively through signed endpoints.
+- **Production deployment verification**: GitHub records a verified Vercel production deployment (deployment `7785423810`, commit `91ed3b9`).
 
-```bash
-npm run test:db
-# For PostgreSQL outside the default macOS installation:
-PG_BIN="$(pg_config --bindir)" npm run test:db
+---
+
+## Performance benchmark
+
+Investigation of read latency under concurrent access revealed that standard RLS policies evaluated `get_my_role()` repeatedly for every scanned candidate row. By wrapping the role-helper call in a scalar subquery `(SELECT (get_my_role()))`, PostgreSQL evaluates the role once per statement using an `InitPlan`.
+
+```sql
+-- Migration 20261104000001_optimize_expense_read_policies.sql
+DROP POLICY IF EXISTS "expenses_select_owner" ON public.expenses;
+CREATE POLICY "expenses_select_owner"
+  ON public.expenses FOR SELECT
+  USING ((SELECT (get_my_role())) = 'OWNER');
 ```
 
-The runner creates a disposable cluster, loads real core/audit/task migrations and a minimal Supabase auth fixture, reproduces the old null-role reorder bypass, and tests the new fix. It checks authorization, input validation, RLS reads, transactional rollback/audit behavior and concurrent task creation/status transitions. It stops and removes the temporary cluster on completion. It never connects to your existing local or hosted database.
+- **Experimental setup**: 5 paired runs alternating baseline and candidate configurations in an isolated local Supabase stack; 10,000 synthetic expenses, 50 employees, 20 virtual clients, 260,351 measured requests.
+- **Result**: Median p95 read latency dropped from **104.89 ms to 35.90 ms** (**65.78% reduction**) with zero response errors.
+- **Detailed report**: Complete methodology, query class distributions, and deep-page trade-offs are documented in [docs/ferrixOps_API_BENCHMARK_RESULTS.md](docs/ferrixOps_API_BENCHMARK_RESULTS.md).
 
-This is focused subsystem coverage, not a test of real JWT validation, every migration, Storage, Edge Functions or all five UI workflows. CI runs separate lint/build and task-database jobs on pull requests and pushes to main. See the [workflow results](https://github.com/TheVishKay/Alum_Factory_EMS/actions/workflows/ci.yml) for the current status.
+---
 
-## Supabase and deployment
+## Roadmap
 
-The [completed local benchmark](docs/ferrixOps_API_BENCHMARK_RESULTS.md) measured a 65.8% mixed-workload p95 reduction with synthetic data and documents the deep-page regressions. For automated expense API testing without factory deployment, see the [local benchmark harness](benchmarks/README.md). Start with `npm run bench:unit` and `npm run bench:smoke`; the full repeated comparison is `npm run bench:full`. This uses isolated local Supabase services and synthetic data.
+Tracked in [docs/ferrixOps_RESUME_ROADMAP.md](docs/ferrixOps_RESUME_ROADMAP.md) and architectural specs:
 
-Use the Supabase CLI for a deliberately selected local/staging project before deploying:
+- [ ] **Automated payroll processing**: Attendance-linked gross wages and statutory deduction calculations (detailed in [PAYROLL_MODULE_SPECIFICATION.md](PAYROLL_MODULE_SPECIFICATION.md)).
+- [ ] **Document lifecycle management**: Automated scheduled workers to prune orphaned receipt uploads from canceled or draft expense records.
+- [ ] **Attendance exception handling**: Support for multi-day missing check-in regularization with supervisor approvals.
+- [ ] **Export pipelines**: Formatted CSV and PDF export generation for fiscal expense audits and attendance timesheets.
+- [ ] **Optimistic task concurrency**: Enhanced conflict handling and status reconciliations for high-concurrency kanban reordering.
 
-1. Apply the migrations in `supabase/migrations` in order and verify their status. Task hardening (`20261023000001_harden_task_ordering.sql`) and expense read-policy tuning (`20261104000001_optimize_expense_read_policies.sql`) are local migrations; this work does not apply them to hosted Supabase.
-2. Configure Supabase Auth site/redirect URLs, email/password policy and signup behavior for your internal application.
-3. Bootstrap the first OWNER account through trusted administrative tooling; standard signups default to EMPLOYEE.
-4. Deploy `create-employee` and `update-employee-status` Edge Functions with their required server-side environment configuration. Keep administrative secrets out of source and client bundles.
-5. Verify the private `expense-documents` bucket and its metadata/storage policies. Downloads use signed URLs.
-6. Deploy `dist/` to the selected static host, set the two frontend environment variables and rewrite client routes to `/index.html`.
-7. Run OWNER, ACCOUNTS and EMPLOYEE acceptance/security checks in staging, then record the release commit and actual deployment evidence.
+---
 
-No hosting provider or live deployment has been independently verified here. Do not treat a successful frontend build as deployment validation.
+## Contributing
 
-## Current limits
+1. Fork the repository and create your feature branch:
+   ```bash
+   git checkout -b feat/your-feature-name
+   ```
+2. Adhere to [Conventional Commits](https://www.conventionalcommits.org/) for commit messages (`feat:`, `fix:`, `perf:`, `test:`, `docs:`, `chore:`).
+3. Ensure code formatting and linting pass:
+   ```bash
+   npm run format
+   npm run lint
+   ```
+4. Verify that existing benchmark and database tests pass:
+   ```bash
+   npm run bench:unit
+   ```
+5. Submit a pull request against `main` describing the changes and testing evidence.
 
-- General Reports still contains hardcoded report counts and planned analytics; Leave Reports lists actual requests. Full report export/scheduling is deferred.
-- Payroll is specified but not implemented. Notifications and appearance preferences are deferred; Settings does implement account identity and password updates.
-- Owner emergency-contact visibility, missing-day attendance correction, pagination/date-window queries and cross-module integration tests need attention.
-- Provisioning uses compensating Auth rollback rather than a distributed transaction. Document MIME metadata and storage-orphan cleanup need further hardening.
-- The new ordering lock serializes create/reorder operations. Arbitrary reorder positions can still collide, and stale client conflict handling needs a defined policy.
+---
 
-The review distinguishes achieved measurements from proposed targets and provides resume wording that does not imply unmeasured adoption, latency improvements or production impact.
+## License
+
+This repository does not currently specify an open-source license. All rights are reserved by the repository owner. To request licensing or commercial permission, please open an issue or contact the maintainers.
+
+---
+
+## Acknowledgments
+
+- [Supabase](https://supabase.com/) for PostgreSQL database infrastructure, GoTrue Auth, and Storage.
+- [Radix UI](https://www.radix-ui.com/) and [Tailwind CSS](https://tailwindcss.com/) for UI primitives and responsive styling.
+- [Lucide Icons](https://lucide.dev/) for dashboard and navigation iconography.
+- [Recharts](https://recharts.org/) for operational metrics and analytics charts.
+- [@hello-pangea/dnd](https://github.com/hello-pangea/dnd) for accessible drag-and-drop kanban task sequencing.

@@ -1,0 +1,6 @@
+pair,first_variant,baseline_p95_ms,optimized_p95_ms,baseline_requests,optimized_requests
+1,baseline,78.30394,35.35732,25663,27200
+2,optimized,109.06003,36.79967,24580,27121
+3,baseline,109.65992,35.50229,24413,27201
+4,optimized,104.89187,35.89670,24934,27083
+5,baseline,91.41562,36.18505,25036,27120
